@@ -6,9 +6,10 @@ LABEL org.opencontainers.image.title=EasyPour
 RUN apk add --no-cache ca-certificates
 EXPOSE 9654
 COPY easypour-service /usr/bin/easypour-service
-COPY service/config.yaml service/menu.yaml /app/
+COPY service/config.yaml service/menu.yaml /config/
 COPY frontend/dist /app/frontend
 WORKDIR /app
-ENV EASYPOUR_CONFIG_FILE=/app/config.yaml
+ENV EASYPOUR_CONFIG_FILE=/config/config.yaml
 ENV EASYPOUR_STATIC_DIR=/app/frontend
+VOLUME /config
 ENTRYPOINT ["/usr/bin/easypour-service"]

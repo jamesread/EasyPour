@@ -12,32 +12,10 @@
 
 ```bash
 docker pull ghcr.io/jamesread/easypour:latest
-docker run -p 9654:9654 ghcr.io/jamesread/easypour:latest
+docker run -p 9654:9654 -v easypour-config:/config ghcr.io/jamesread/easypour:latest
 ```
+
+Config and menu live in `/config` (config.yaml and menu.yaml). Use a named volume `-v easypour-config:/config` to persist and edit them, or bind-mount a host dir: `-v /path/to/your/config:/config`.
 
 The API is available at `http://localhost:9654`. For the full web UI, run the frontend locally (see [Development](#development) below).
 
-## Development
-
-To run the full stack from source:
-
-```bash
-make generate
-make install
-make dev-service   # terminal 1: backend
-make dev-frontend  # terminal 2: frontend
-```
-
-Visit `http://localhost:3000` for the web UI.
-
-## Project Structure
-
-- `protocol/` - ConnectRPC protocol definitions (buf + protobuf)
-- `service/` - Go backend service
-- `frontend/` - Vue 3 + Vite frontend
-
-## Prerequisites
-
-- Go 1.21+
-- Node.js 18+
-- buf CLI: `go install github.com/bufbuild/buf/cmd/buf@latest`
