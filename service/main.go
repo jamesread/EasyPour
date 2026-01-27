@@ -390,6 +390,25 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+// loginOrSPA handles /login: POST goes to handleLogin; GET/HEAD when spa is set serves index.html
+// so auth redirects to /login still load the SPA instead of 405.
+func loginOrSPA(authCtx *auth.AuthShimContext, spa http.Handler) http.Handler {
+	login := handleLogin(authCtx)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			login(w, r)
+			return
+		}
+		if (r.Method == http.MethodGet || r.Method == http.MethodHead) && spa != nil {
+			r = r.Clone(r.Context())
+			r.URL.Path = "/"
+			spa.ServeHTTP(w, r)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+}
+
 // handleLogin handles POST /login for session-based auth. Validates username/password,
 // creates a session, and sets the session cookie.
 func handleLogin(authCtx *auth.AuthShimContext) http.HandlerFunc {
@@ -462,8 +481,12 @@ func spaFileServer(root string) http.Handler {
 			return
 		}
 		path := filepath.Clean(r.URL.Path)
-		if path == "" || path == "." {
-			path = "/"
+		if path == "" || path == "." || path == "/" {
+			// Serve index.html directly for root to avoid any redirect from the file server.
+			r = r.Clone(r.Context())
+			r.URL.Path = "/index.html"
+			fs.ServeHTTP(w, r)
+			return
 		}
 		if path[0] != '/' {
 			path = "/" + path
@@ -571,8 +594,14 @@ func main() {
 		webhookClient: webhookClient,
 	}
 	mux := http.NewServeMux()
+	staticDir := getStaticDir()
+	var spaHandler http.Handler
+	if staticDir != "" {
+		spaHandler = spaFileServer(staticDir)
+		log.Printf("Serving frontend from %s", staticDir)
+	}
 	if authCtx != nil {
-		mux.HandleFunc("/login", handleLogin(authCtx))
+		mux.Handle("/login", loginOrSPA(authCtx, spaHandler))
 		imagesDir := filepath.Join(filepath.Dir(menuPath), "images")
 		mux.HandleFunc("/upload", handleUpload(authCtx, imagesDir))
 		mux.Handle("/images/", http.StripPrefix("/images", http.FileServer(http.Dir(imagesDir))))
@@ -583,9 +612,8 @@ func main() {
 	} else {
 		mux.Handle(path, handler)
 	}
-	if staticDir := getStaticDir(); staticDir != "" {
-		mux.Handle("/", spaFileServer(staticDir))
-		log.Printf("Serving frontend from %s", staticDir)
+	if spaHandler != nil {
+		mux.Handle("/", spaHandler)
 	}
 
 	addr := ":9654"

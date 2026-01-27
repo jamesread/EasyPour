@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
-    allowedHosts: ['mindstorm'],
+    allowedHosts: ['localhost', 'mindstorm'],
     port: 3000,
     proxy: {
       '/easypour.v1.EasyPourService': {
