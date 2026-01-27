@@ -61,6 +61,7 @@ dockers:
     extra_files:
       - service/config.yaml
       - service/menu.yaml
+      - frontend/dist
 
   - image_templates:
       - "ghcr.io/jamesread/easypour:{{ .Tag }}-arm64"
@@ -75,7 +76,7 @@ dockers:
     extra_files:
       - service/config.yaml
       - service/menu.yaml
-      - frontend/dist/
+      - frontend/dist
 
 docker_manifests:
   - name_template: ghcr.io/jamesread/easypour:{{ .Version }}
