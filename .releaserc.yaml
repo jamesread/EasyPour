@@ -1,0 +1,13 @@
+---
+# Only allow releases on the main branch
+branches:
+  - name: main
+
+plugins:
+  - '@semantic-release/commit-analyzer'
+  - '@semantic-release/git'
+  - - "@semantic-release/exec"
+    - publishCmd: |
+        goreleaser release --clean --timeout 60m
+
+tagFormat: '${version}'

@@ -1,0 +1,50 @@
+# Generated code
+service/gen/
+frontend/gen/
+
+# Dependencies
+frontend/node_modules/
+vendor/
+
+# Build outputs
+frontend/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+service/easypour-service
+service/service
+
+# Go
+go.work
+go.work.sum
+
+# Runtime / temp
+service/tmp/
+service/images/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+*.cover

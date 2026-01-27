@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package easypour.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "easypour/service/gen/easypour/v1;easypourv1";
+
+// OrderRequest represents a request to order a menu item (beverage or food)
+message OrderRequest {
+  string menu_item_id = 1;  // id of the menu item being ordered
+  bool add_sugar = 2;
+  bool add_milk = 3;
+  int32 sugar_amount = 4; // Optional: number of sugar packets/spoons
+  int32 milk_amount = 5;  // Optional: amount of milk (percentage or ml)
+}
+
+// OrderResponse represents the response after placing an order
+message OrderResponse {
+  string order_id = 1;
+  string menu_item_id = 2;  // id of the menu item that was ordered
+  bool add_sugar = 3;
+  bool add_milk = 4;
+  int32 sugar_amount = 5;
+  int32 milk_amount = 6;
+  string status = 7; // e.g., "preparing", "ready", "completed"
+  int64 created_at = 8; // Unix timestamp
+}
+
+// MenuItem represents an item in the menu (beverage, food, etc.)
+message MenuItem {
+  string id = 6;  // stable id for edit/delete; backend assigns on create
+  string name = 2;
+  string description = 3;
+  bool supports_sugar = 4;
+  bool supports_milk = 5;
+  string image_url = 7;  // URL path to item image, e.g. /images/item-abc.jpg
+  string category = 8;   // e.g. "Drinks", "Food"; used to group items in the menu
+}
+
+// GetMenuRequest is a request to get the menu
+message GetMenuRequest {}
+
+// GetMenuResponse contains the menu items
+message GetMenuResponse {
+  repeated MenuItem items = 1;
+}
+
+// CreateMenuItemRequest creates a new menu item (admin only)
+message CreateMenuItemRequest {
+  MenuItem item = 1;  // id may be empty; backend assigns
+}
+
+// UpdateMenuItemRequest updates an existing menu item (admin only)
+message UpdateMenuItemRequest {
+  MenuItem item = 1;  // item.id must be set
+}
+
+// DeleteMenuItemRequest deletes a menu item by id (admin only)
+message DeleteMenuItemRequest {
+  string id = 1;
+}
+
+// GetCurrentUserRequest is a request for the current user (when auth is enabled)
+message GetCurrentUserRequest {}
+
+// GetCurrentUserResponse returns the authenticated user when auth is enabled
+message GetCurrentUserResponse {
+  bool is_authenticated = 1;
+  string username = 2;
+  bool is_admin = 3;  // true when user is in the "admin" user group
+}
+
+// EasyPourService provides methods for the menu and orders
+service EasyPourService {
+  // GetMenu returns the menu (beverages, food, etc.)
+  rpc GetMenu(GetMenuRequest) returns (GetMenuResponse) {}
+
+  // OrderDrink places an order for a menu item
+  rpc OrderDrink(OrderRequest) returns (OrderResponse) {}
+
+  // GetCurrentUser returns the authenticated user when auth is enabled
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse) {}
+
+  // CreateMenuItem adds a menu item (admin only). Item id is assigned by the server.
+  rpc CreateMenuItem(CreateMenuItemRequest) returns (MenuItem) {}
+
+  // UpdateMenuItem updates a menu item (admin only).
+  rpc UpdateMenuItem(UpdateMenuItemRequest) returns (MenuItem) {}
+
+  // DeleteMenuItem removes a menu item by id (admin only).
+  rpc DeleteMenuItem(DeleteMenuItemRequest) returns (google.protobuf.Empty) {}
+}

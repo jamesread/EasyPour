@@ -1,0 +1,98 @@
+project_name: EasyPour
+version: 2
+before:
+  hooks:
+    - make generate
+    - make frontend
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    binary: easypour-service
+    main: main.go
+    dir: service
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  version_template: "{{ .Branch }}-{{ .ShortCommit }}"
+changelog:
+  sort: asc
+  groups:
+    - title: 'Security'
+      regexp: '^.*?security(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Features'
+      regexp: '^.*?feat.*?(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^cicd:'
+      - '^chore:'
+      - '^release:'
+      - '^refactor:'
+      - '^Merge branch'
+
+archives: []
+
+dockers:
+  - image_templates:
+      - "ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Tag }}-amd64"
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: amd64
+    skip_push: false
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Tag}}"
+    extra_files:
+      - service/config.yaml
+      - service/menu.yaml
+
+  - image_templates:
+      - "ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Tag }}-arm64"
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: arm64
+    skip_push: false
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Tag}}"
+    extra_files:
+      - service/config.yaml
+      - service/menu.yaml
+
+docker_manifests:
+  - name_template: ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}
+    image_templates:
+      - ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}-amd64
+      - ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}-arm64
+
+  - name_template: ghcr.io/{{ .Repo.Owner }}/easypour:latest
+    image_templates:
+      - ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}-amd64
+      - ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}-arm64
+
+release:
+  footer: |
+    ## Container images (from GitHub)
+
+    - `docker pull ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}`
+
+    Thanks for using EasyPour!
