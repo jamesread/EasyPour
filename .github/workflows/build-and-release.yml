@@ -53,9 +53,6 @@ jobs:
         run: |
           echo "DATE=$(date +'%Y-%m-%d')" >> "$GITHUB_ENV"
 
-      - name: make frontend
-        run: make -w frontend
-
       - name: make service
         run: make -w service
 
