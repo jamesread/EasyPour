@@ -75,6 +75,7 @@ dockers:
     extra_files:
       - service/config.yaml
       - service/menu.yaml
+      - frontend/dist/
 
 docker_manifests:
   - name_template: ghcr.io/jamesread/easypour:{{ .Version }}
