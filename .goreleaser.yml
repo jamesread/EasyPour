@@ -1,9 +1,7 @@
 project_name: EasyPour
 version: 2
 before:
-  hooks:
-    - make generate
-    - make frontend
+  hooks: []
 
 builds:
   - env:

@@ -12,15 +12,6 @@ configVersion: 1
 #         - username: admin
 #           usergroup: admin
 #           password: "$argon2id$..."   # generate with: ./easypour-service -hash-password=YOUR_PASSWORD
-#
-# Config file is loaded from (first found): ./config.yaml, ./config/config.yaml,
-# or path in EASYPOUR_CONFIG_FILE.
-#
-# webhooks: optional list of URLs to POST order details (JSON) when an order is submitted.
-#   - url: "https://example.com/order-webhook"
-#   - url: "https://other.com/hook"
-webhooks:
-  - url: "https://n8n.k8s.teratan.lan/webhook/58fbd34a-1318-45d2-85b9-fd3a8d6cc5f2"
 
 auth:
     localUsers:
@@ -29,4 +20,13 @@ auth:
         - username: "admin"
           usergroup: "admin"   # users in "admin" group can edit the menu
           # Generate hash with: ./easypour-service -hash-password=YOUR_PASSWORD
-          password: "$argon2id$v=19$m=65536,t=4,p=6$GJK81VSJJQwJiESPq5OohA$FkgMRduwVTtxr7z0gr3eJJqjOVMMbZWtgl4Qu46Y8jg"
+          # Default password is "password"
+          password: "$argon2id$v=19$m=65536,t=4,p=6$GJK81VSJJQwJiESPq5OohA$FkgMRduwVTtxr7z0gr3eJJqjOVMMbZWtgl4Qu46Y8jg" # notsecret
+
+
+# webhooks: optional list of URLs to POST order details (JSON) when an order is submitted.
+#   - url: "https://example.com/order-webhook"
+#   - url: "https://other.com/hook"
+webhooks:
+  - url: "https://n8n.example.lan/webhook/58fbd34a-1318-45d2-85b9-fd3a8d6cc5f2"
+
