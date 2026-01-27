@@ -49,7 +49,7 @@ archives: []
 
 dockers:
   - image_templates:
-      - "ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Tag }}-amd64"
+      - "ghcr.io/jamesread/easypour:{{ .Tag }}-amd64"
     dockerfile: Dockerfile
     goos: linux
     goarch: amd64
@@ -63,7 +63,7 @@ dockers:
       - service/menu.yaml
 
   - image_templates:
-      - "ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Tag }}-arm64"
+      - "ghcr.io/jamesread/easypour:{{ .Tag }}-arm64"
     dockerfile: Dockerfile
     goos: linux
     goarch: arm64
@@ -77,20 +77,20 @@ dockers:
       - service/menu.yaml
 
 docker_manifests:
-  - name_template: ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}
+  - name_template: ghcr.io/jamesread/easypour:{{ .Version }}
     image_templates:
-      - ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}-amd64
-      - ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}-arm64
+      - ghcr.io/jamesread/easypour:{{ .Version }}-amd64
+      - ghcr.io/jamesread/easypour:{{ .Version }}-arm64
 
-  - name_template: ghcr.io/{{ .Repo.Owner }}/easypour:latest
+  - name_template: ghcr.io/jamesread/easypour:latest
     image_templates:
-      - ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}-amd64
-      - ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}-arm64
+      - ghcr.io/jamesread/easypour:{{ .Version }}-amd64
+      - ghcr.io/jamesread/easypour:{{ .Version }}-arm64
 
 release:
   footer: |
     ## Container images (from GitHub)
 
-    - `docker pull ghcr.io/{{ .Repo.Owner }}/easypour:{{ .Version }}`
+    - `docker pull ghcr.io/jamesread/easypour:{{ .Version }}`
 
     Thanks for using EasyPour!
