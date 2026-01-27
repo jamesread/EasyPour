@@ -3,7 +3,6 @@ frontend/node_modules/
 vendor/
 
 # Build outputs
-frontend/dist/
 *.exe
 *.exe~
 *.dll
