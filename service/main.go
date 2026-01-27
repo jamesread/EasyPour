@@ -475,6 +475,7 @@ func getStaticDir() string {
 func spaFileServer(root string) http.Handler {
 	fs := http.FileServer(http.Dir(root))
 	rootAbs, _ := filepath.Abs(root)
+	indexPath := filepath.Join(root, "index.html")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			http.NotFound(w, r)
@@ -482,10 +483,20 @@ func spaFileServer(root string) http.Handler {
 		}
 		path := filepath.Clean(r.URL.Path)
 		if path == "" || path == "." || path == "/" {
-			// Serve index.html directly for root to avoid any redirect from the file server.
-			r = r.Clone(r.Context())
-			r.URL.Path = "/index.html"
-			fs.ServeHTTP(w, r)
+			// Serve index.html directly; do not use FileServer for it because
+			// FileServer redirects /index.html to ./ (301), which breaks / and /./
+			f, err := os.Open(indexPath)
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			defer f.Close()
+			fi, err := f.Stat()
+			if err != nil || fi.IsDir() {
+				http.NotFound(w, r)
+				return
+			}
+			http.ServeContent(w, r, "index.html", fi.ModTime(), f)
 			return
 		}
 		if path[0] != '/' {
