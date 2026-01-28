@@ -547,19 +547,82 @@ func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
 	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{8}
 }
 
-// GetCurrentUserResponse returns the authenticated user when auth is enabled
+// OAuthProvider describes a configured OAuth2 login provider for the login form
+type OAuthProvider struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                          // provider id, e.g. "google", "github"
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                      // display name, e.g. "Google", "GitHub"
+	AuthUrl       string                 `protobuf:"bytes,3,opt,name=auth_url,json=authUrl,proto3" json:"auth_url,omitempty"` // URL to start OAuth2 flow (redirect or link)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OAuthProvider) Reset() {
+	*x = OAuthProvider{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OAuthProvider) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OAuthProvider) ProtoMessage() {}
+
+func (x *OAuthProvider) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OAuthProvider.ProtoReflect.Descriptor instead.
+func (*OAuthProvider) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *OAuthProvider) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *OAuthProvider) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *OAuthProvider) GetAuthUrl() string {
+	if x != nil {
+		return x.AuthUrl
+	}
+	return ""
+}
+
+// GetCurrentUserResponse returns the authenticated user when auth is enabled,
+// and the list of configured OAuth2 providers for the login form (callable unauthenticated).
 type GetCurrentUserResponse struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	IsAuthenticated bool                   `protobuf:"varint,1,opt,name=is_authenticated,json=isAuthenticated,proto3" json:"is_authenticated,omitempty"`
 	Username        string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
 	IsAdmin         bool                   `protobuf:"varint,3,opt,name=is_admin,json=isAdmin,proto3" json:"is_admin,omitempty"` // true when user is in the "admin" user group
+	OauthProviders  []*OAuthProvider       `protobuf:"bytes,4,rep,name=oauth_providers,json=oauthProviders,proto3" json:"oauth_providers,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetCurrentUserResponse) Reset() {
 	*x = GetCurrentUserResponse{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[9]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -571,7 +634,7 @@ func (x *GetCurrentUserResponse) String() string {
 func (*GetCurrentUserResponse) ProtoMessage() {}
 
 func (x *GetCurrentUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[9]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -584,7 +647,7 @@ func (x *GetCurrentUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentUserResponse.ProtoReflect.Descriptor instead.
 func (*GetCurrentUserResponse) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{9}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetCurrentUserResponse) GetIsAuthenticated() bool {
@@ -606,6 +669,13 @@ func (x *GetCurrentUserResponse) GetIsAdmin() bool {
 		return x.IsAdmin
 	}
 	return false
+}
+
+func (x *GetCurrentUserResponse) GetOauthProviders() []*OAuthProvider {
+	if x != nil {
+		return x.OauthProviders
+	}
+	return nil
 }
 
 var File_easypour_v1_easypour_proto protoreflect.FileDescriptor
@@ -650,11 +720,16 @@ const file_easypour_v1_easypour_proto_rawDesc = "" +
 	"\x04item\x18\x01 \x01(\v2\x15.easypour.v1.MenuItemR\x04item\"'\n" +
 	"\x15DeleteMenuItemRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
-	"\x15GetCurrentUserRequest\"z\n" +
+	"\x15GetCurrentUserRequest\"N\n" +
+	"\rOAuthProvider\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
+	"\bauth_url\x18\x03 \x01(\tR\aauthUrl\"\xbf\x01\n" +
 	"\x16GetCurrentUserResponse\x12)\n" +
 	"\x10is_authenticated\x18\x01 \x01(\bR\x0fisAuthenticated\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x19\n" +
-	"\bis_admin\x18\x03 \x01(\bR\aisAdmin2\xeb\x03\n" +
+	"\bis_admin\x18\x03 \x01(\bR\aisAdmin\x12C\n" +
+	"\x0foauth_providers\x18\x04 \x03(\v2\x1a.easypour.v1.OAuthProviderR\x0eoauthProviders2\xeb\x03\n" +
 	"\x0fEasyPourService\x12F\n" +
 	"\aGetMenu\x12\x1b.easypour.v1.GetMenuRequest\x1a\x1c.easypour.v1.GetMenuResponse\"\x00\x12E\n" +
 	"\n" +
@@ -676,7 +751,7 @@ func file_easypour_v1_easypour_proto_rawDescGZIP() []byte {
 	return file_easypour_v1_easypour_proto_rawDescData
 }
 
-var file_easypour_v1_easypour_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_easypour_v1_easypour_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_easypour_v1_easypour_proto_goTypes = []any{
 	(*OrderRequest)(nil),           // 0: easypour.v1.OrderRequest
 	(*OrderResponse)(nil),          // 1: easypour.v1.OrderResponse
@@ -687,30 +762,32 @@ var file_easypour_v1_easypour_proto_goTypes = []any{
 	(*UpdateMenuItemRequest)(nil),  // 6: easypour.v1.UpdateMenuItemRequest
 	(*DeleteMenuItemRequest)(nil),  // 7: easypour.v1.DeleteMenuItemRequest
 	(*GetCurrentUserRequest)(nil),  // 8: easypour.v1.GetCurrentUserRequest
-	(*GetCurrentUserResponse)(nil), // 9: easypour.v1.GetCurrentUserResponse
-	(*emptypb.Empty)(nil),          // 10: google.protobuf.Empty
+	(*OAuthProvider)(nil),          // 9: easypour.v1.OAuthProvider
+	(*GetCurrentUserResponse)(nil), // 10: easypour.v1.GetCurrentUserResponse
+	(*emptypb.Empty)(nil),          // 11: google.protobuf.Empty
 }
 var file_easypour_v1_easypour_proto_depIdxs = []int32{
 	2,  // 0: easypour.v1.GetMenuResponse.items:type_name -> easypour.v1.MenuItem
 	2,  // 1: easypour.v1.CreateMenuItemRequest.item:type_name -> easypour.v1.MenuItem
 	2,  // 2: easypour.v1.UpdateMenuItemRequest.item:type_name -> easypour.v1.MenuItem
-	3,  // 3: easypour.v1.EasyPourService.GetMenu:input_type -> easypour.v1.GetMenuRequest
-	0,  // 4: easypour.v1.EasyPourService.OrderDrink:input_type -> easypour.v1.OrderRequest
-	8,  // 5: easypour.v1.EasyPourService.GetCurrentUser:input_type -> easypour.v1.GetCurrentUserRequest
-	5,  // 6: easypour.v1.EasyPourService.CreateMenuItem:input_type -> easypour.v1.CreateMenuItemRequest
-	6,  // 7: easypour.v1.EasyPourService.UpdateMenuItem:input_type -> easypour.v1.UpdateMenuItemRequest
-	7,  // 8: easypour.v1.EasyPourService.DeleteMenuItem:input_type -> easypour.v1.DeleteMenuItemRequest
-	4,  // 9: easypour.v1.EasyPourService.GetMenu:output_type -> easypour.v1.GetMenuResponse
-	1,  // 10: easypour.v1.EasyPourService.OrderDrink:output_type -> easypour.v1.OrderResponse
-	9,  // 11: easypour.v1.EasyPourService.GetCurrentUser:output_type -> easypour.v1.GetCurrentUserResponse
-	2,  // 12: easypour.v1.EasyPourService.CreateMenuItem:output_type -> easypour.v1.MenuItem
-	2,  // 13: easypour.v1.EasyPourService.UpdateMenuItem:output_type -> easypour.v1.MenuItem
-	10, // 14: easypour.v1.EasyPourService.DeleteMenuItem:output_type -> google.protobuf.Empty
-	9,  // [9:15] is the sub-list for method output_type
-	3,  // [3:9] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	9,  // 3: easypour.v1.GetCurrentUserResponse.oauth_providers:type_name -> easypour.v1.OAuthProvider
+	3,  // 4: easypour.v1.EasyPourService.GetMenu:input_type -> easypour.v1.GetMenuRequest
+	0,  // 5: easypour.v1.EasyPourService.OrderDrink:input_type -> easypour.v1.OrderRequest
+	8,  // 6: easypour.v1.EasyPourService.GetCurrentUser:input_type -> easypour.v1.GetCurrentUserRequest
+	5,  // 7: easypour.v1.EasyPourService.CreateMenuItem:input_type -> easypour.v1.CreateMenuItemRequest
+	6,  // 8: easypour.v1.EasyPourService.UpdateMenuItem:input_type -> easypour.v1.UpdateMenuItemRequest
+	7,  // 9: easypour.v1.EasyPourService.DeleteMenuItem:input_type -> easypour.v1.DeleteMenuItemRequest
+	4,  // 10: easypour.v1.EasyPourService.GetMenu:output_type -> easypour.v1.GetMenuResponse
+	1,  // 11: easypour.v1.EasyPourService.OrderDrink:output_type -> easypour.v1.OrderResponse
+	10, // 12: easypour.v1.EasyPourService.GetCurrentUser:output_type -> easypour.v1.GetCurrentUserResponse
+	2,  // 13: easypour.v1.EasyPourService.CreateMenuItem:output_type -> easypour.v1.MenuItem
+	2,  // 14: easypour.v1.EasyPourService.UpdateMenuItem:output_type -> easypour.v1.MenuItem
+	11, // 15: easypour.v1.EasyPourService.DeleteMenuItem:output_type -> google.protobuf.Empty
+	10, // [10:16] is the sub-list for method output_type
+	4,  // [4:10] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_easypour_v1_easypour_proto_init() }
@@ -724,7 +801,7 @@ func file_easypour_v1_easypour_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_easypour_v1_easypour_proto_rawDesc), len(file_easypour_v1_easypour_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -13,11 +13,19 @@ type Webhook struct {
 	URL string `yaml:"url"`
 }
 
+// OAuthProviderConfig describes a configured OAuth2 provider for the login form.
+type OAuthProviderConfig struct {
+	ID      string `yaml:"id"`       // provider id, e.g. "google", "github"
+	Name    string `yaml:"name"`     // display name, e.g. "Google", "GitHub"
+	AuthURL string `yaml:"auth_url"` // URL to start OAuth2 flow
+}
+
 // Config holds application configuration including auth (httpauthshim format).
 type Config struct {
-	ConfigVersion int                `yaml:"configVersion"`
-	Auth          *authpublic.Config `yaml:"auth"`
-	Webhooks      []Webhook          `yaml:"webhooks"`
+	ConfigVersion  int                    `yaml:"configVersion"`
+	Auth           *authpublic.Config     `yaml:"auth"`
+	Webhooks       []Webhook              `yaml:"webhooks"`
+	OAuthProviders []OAuthProviderConfig `yaml:"oauthProviders"`
 }
 
 // GetConfigPath returns the first existing config file path, or empty string.

@@ -24,6 +24,15 @@ auth:
           password: "$argon2id$v=19$m=65536,t=4,p=6$GJK81VSJJQwJiESPq5OohA$FkgMRduwVTtxr7z0gr3eJJqjOVMMbZWtgl4Qu46Y8jg" # notsecret
 
 
+# oauthProviders: optional list of OAuth2 providers shown on the login form.
+#   - id: "google"
+#     name: "Google"
+#     auth_url: "https://your-backend/auth/google"
+#   - id: "github"
+#     name: "GitHub"
+#     auth_url: "https://your-backend/auth/github"
+# oauthProviders: []
+
 # webhooks: optional list of URLs to POST order details (JSON) when an order is submitted.
 #   - url: "https://example.com/order-webhook"
 #   - url: "https://other.com/hook"

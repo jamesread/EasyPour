@@ -64,11 +64,20 @@ message DeleteMenuItemRequest {
 // GetCurrentUserRequest is a request for the current user (when auth is enabled)
 message GetCurrentUserRequest {}
 
-// GetCurrentUserResponse returns the authenticated user when auth is enabled
+// OAuthProvider describes a configured OAuth2 login provider for the login form
+message OAuthProvider {
+  string id = 1;       // provider id, e.g. "google", "github"
+  string name = 2;     // display name, e.g. "Google", "GitHub"
+  string auth_url = 3; // URL to start OAuth2 flow (redirect or link)
+}
+
+// GetCurrentUserResponse returns the authenticated user when auth is enabled,
+// and the list of configured OAuth2 providers for the login form (callable unauthenticated).
 message GetCurrentUserResponse {
   bool is_authenticated = 1;
   string username = 2;
   bool is_admin = 3;  // true when user is in the "admin" user group
+  repeated OAuthProvider oauth_providers = 4;
 }
 
 // EasyPourService provides methods for the menu and orders

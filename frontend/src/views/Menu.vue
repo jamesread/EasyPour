@@ -767,13 +767,7 @@ onMounted(async () => {
 /* Right sidebar: visible on desktop (768px+), hidden on mobile */
 /* Override femtocrank's visibility: hidden so the sidebar is visible */
 .basket-sidebar {
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  width: 320px;
-  min-width: 320px;
   visibility: visible;
-  background: #e2e8f0;
   border-left: 2px solid #94a3b8;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;

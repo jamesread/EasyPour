@@ -51,8 +51,9 @@
     <article class="login-article-inline">
       <Login
         ref="loginRef"
-        :oauth-providers="[]"
+        :oauth-providers="oauthProviders"
         @local-login="handleLocalLogin"
+        @oauth-login="handleOAuthLogin"
       />
     </article>
   </main>
@@ -65,11 +66,15 @@
       </button>
       <Login
         ref="loginRef"
-        :oauth-providers="[]"
+        :oauth-providers="oauthProviders"
         @local-login="handleLocalLogin"
+        @oauth-login="handleOAuthLogin"
       />
     </article>
   </dialog>
+  <footer>
+	  <span>v{{ version }}</span>
+  </footer>
 </template>
 
 <script setup>
@@ -82,8 +87,9 @@ import Login from 'picocrank/vue/components/Login.vue'
 import { useBasket } from './composables/useBasket'
 import { useCurrentUser } from './composables/useCurrentUser'
 
+const version = __APP_VERSION__
 const { basketItems } = useBasket()
-const { username, refresh } = useCurrentUser()
+const { username, refresh, oauthProviders } = useCurrentUser()
 const showLoginForm = ref(false)
 const loginDialogRef = ref(null)
 const loginRef = ref(null)
@@ -121,6 +127,12 @@ async function handleLocalLogin(credentials) {
     }
   } catch {
     loginRef.value?.setLocalLoginError('Login failed.')
+  }
+}
+
+function handleOAuthLogin(provider) {
+  if (provider?.authUrl) {
+    window.location.href = provider.authUrl
   }
 }
 </script>
@@ -273,4 +285,5 @@ async function handleLocalLogin(credentials) {
   width: 1.25rem;
   height: 1.25rem;
 }
+
 </style>

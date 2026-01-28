@@ -1,0 +1,10 @@
+services:
+  easypour:
+    image: ghcr.io/jamesread/easypour:latest
+    ports:
+      - "9654:9654"
+    volumes:
+      - easypour-config:/config
+
+volumes:
+  easypour-config:

@@ -18,6 +18,9 @@
           <dt v-if="isAdmin">Role</dt>
           <dd v-if="isAdmin">Admin</dd>
         </dl>
+        <div class="logout-section">
+          <button type="button" class="logout-btn" @click="handleLogout">Log out</button>
+        </div>
         <div v-if="isAdmin" class="edit-mode-section">
           <label class="edit-mode-toggle">
             <input v-model="editMode" type="checkbox" />
@@ -31,11 +34,18 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
 import { useCurrentUser } from '../composables/useCurrentUser'
 import { useEditMode } from '../composables/useEditMode'
 
-const { username, isAdmin } = useCurrentUser()
+const router = useRouter()
+const { username, isAdmin, logout } = useCurrentUser()
 const { editMode } = useEditMode()
+
+async function handleLogout() {
+  await logout()
+  router.push('/')
+}
 </script>
 
 <style scoped>
@@ -72,6 +82,24 @@ const { editMode } = useEditMode()
 
 .profile-details dd {
   margin: 0;
+}
+
+.logout-section {
+  margin-top: 1.5rem;
+}
+
+.logout-btn {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background: var(--button-secondary-bg, #f0f0f0);
+  color: var(--text, #333);
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 4px;
+}
+
+.logout-btn:hover {
+  background: var(--button-secondary-hover-bg, #e5e5e5);
 }
 
 .edit-mode-section {

@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file easypour/v1/easypour.proto.
  */
 export const file_easypour_v1_easypour: GenFile = /*@__PURE__*/
-  fileDesc("ChplYXN5cG91ci92MS9lYXN5cG91ci5wcm90bxILZWFzeXBvdXIudjEidAoMT3JkZXJSZXF1ZXN0EhQKDG1lbnVfaXRlbV9pZBgBIAEoCRIRCglhZGRfc3VnYXIYAiABKAgSEAoIYWRkX21pbGsYAyABKAgSFAoMc3VnYXJfYW1vdW50GAQgASgFEhMKC21pbGtfYW1vdW50GAUgASgFIqsBCg1PcmRlclJlc3BvbnNlEhAKCG9yZGVyX2lkGAEgASgJEhQKDG1lbnVfaXRlbV9pZBgCIAEoCRIRCglhZGRfc3VnYXIYAyABKAgSEAoIYWRkX21pbGsYBCABKAgSFAoMc3VnYXJfYW1vdW50GAUgASgFEhMKC21pbGtfYW1vdW50GAYgASgFEg4KBnN0YXR1cxgHIAEoCRISCgpjcmVhdGVkX2F0GAggASgDIo0BCghNZW51SXRlbRIKCgJpZBgGIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhYKDnN1cHBvcnRzX3N1Z2FyGAQgASgIEhUKDXN1cHBvcnRzX21pbGsYBSABKAgSEQoJaW1hZ2VfdXJsGAcgASgJEhAKCGNhdGVnb3J5GAggASgJIhAKDkdldE1lbnVSZXF1ZXN0IjcKD0dldE1lbnVSZXNwb25zZRIkCgVpdGVtcxgBIAMoCzIVLmVhc3lwb3VyLnYxLk1lbnVJdGVtIjwKFUNyZWF0ZU1lbnVJdGVtUmVxdWVzdBIjCgRpdGVtGAEgASgLMhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iPAoVVXBkYXRlTWVudUl0ZW1SZXF1ZXN0EiMKBGl0ZW0YASABKAsyFS5lYXN5cG91ci52MS5NZW51SXRlbSIjChVEZWxldGVNZW51SXRlbVJlcXVlc3QSCgoCaWQYASABKAkiFwoVR2V0Q3VycmVudFVzZXJSZXF1ZXN0IlYKFkdldEN1cnJlbnRVc2VyUmVzcG9uc2USGAoQaXNfYXV0aGVudGljYXRlZBgBIAEoCBIQCgh1c2VybmFtZRgCIAEoCRIQCghpc19hZG1pbhgDIAEoCDLrAwoPRWFzeVBvdXJTZXJ2aWNlEkYKB0dldE1lbnUSGy5lYXN5cG91ci52MS5HZXRNZW51UmVxdWVzdBocLmVhc3lwb3VyLnYxLkdldE1lbnVSZXNwb25zZSIAEkUKCk9yZGVyRHJpbmsSGS5lYXN5cG91ci52MS5PcmRlclJlcXVlc3QaGi5lYXN5cG91ci52MS5PcmRlclJlc3BvbnNlIgASWwoOR2V0Q3VycmVudFVzZXISIi5lYXN5cG91ci52MS5HZXRDdXJyZW50VXNlclJlcXVlc3QaIy5lYXN5cG91ci52MS5HZXRDdXJyZW50VXNlclJlc3BvbnNlIgASTQoOQ3JlYXRlTWVudUl0ZW0SIi5lYXN5cG91ci52MS5DcmVhdGVNZW51SXRlbVJlcXVlc3QaFS5lYXN5cG91ci52MS5NZW51SXRlbSIAEk0KDlVwZGF0ZU1lbnVJdGVtEiIuZWFzeXBvdXIudjEuVXBkYXRlTWVudUl0ZW1SZXF1ZXN0GhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iABJOCg5EZWxldGVNZW51SXRlbRIiLmVhc3lwb3VyLnYxLkRlbGV0ZU1lbnVJdGVtUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIAQi1aK2Vhc3lwb3VyL3NlcnZpY2UvZ2VuL2Vhc3lwb3VyL3YxO2Vhc3lwb3VydjFiBnByb3RvMw", [file_google_protobuf_empty]);
+  fileDesc("ChplYXN5cG91ci92MS9lYXN5cG91ci5wcm90bxILZWFzeXBvdXIudjEidAoMT3JkZXJSZXF1ZXN0EhQKDG1lbnVfaXRlbV9pZBgBIAEoCRIRCglhZGRfc3VnYXIYAiABKAgSEAoIYWRkX21pbGsYAyABKAgSFAoMc3VnYXJfYW1vdW50GAQgASgFEhMKC21pbGtfYW1vdW50GAUgASgFIqsBCg1PcmRlclJlc3BvbnNlEhAKCG9yZGVyX2lkGAEgASgJEhQKDG1lbnVfaXRlbV9pZBgCIAEoCRIRCglhZGRfc3VnYXIYAyABKAgSEAoIYWRkX21pbGsYBCABKAgSFAoMc3VnYXJfYW1vdW50GAUgASgFEhMKC21pbGtfYW1vdW50GAYgASgFEg4KBnN0YXR1cxgHIAEoCRISCgpjcmVhdGVkX2F0GAggASgDIo0BCghNZW51SXRlbRIKCgJpZBgGIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhYKDnN1cHBvcnRzX3N1Z2FyGAQgASgIEhUKDXN1cHBvcnRzX21pbGsYBSABKAgSEQoJaW1hZ2VfdXJsGAcgASgJEhAKCGNhdGVnb3J5GAggASgJIhAKDkdldE1lbnVSZXF1ZXN0IjcKD0dldE1lbnVSZXNwb25zZRIkCgVpdGVtcxgBIAMoCzIVLmVhc3lwb3VyLnYxLk1lbnVJdGVtIjwKFUNyZWF0ZU1lbnVJdGVtUmVxdWVzdBIjCgRpdGVtGAEgASgLMhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iPAoVVXBkYXRlTWVudUl0ZW1SZXF1ZXN0EiMKBGl0ZW0YASABKAsyFS5lYXN5cG91ci52MS5NZW51SXRlbSIjChVEZWxldGVNZW51SXRlbVJlcXVlc3QSCgoCaWQYASABKAkiFwoVR2V0Q3VycmVudFVzZXJSZXF1ZXN0IjsKDU9BdXRoUHJvdmlkZXISCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIQCghhdXRoX3VybBgDIAEoCSKLAQoWR2V0Q3VycmVudFVzZXJSZXNwb25zZRIYChBpc19hdXRoZW50aWNhdGVkGAEgASgIEhAKCHVzZXJuYW1lGAIgASgJEhAKCGlzX2FkbWluGAMgASgIEjMKD29hdXRoX3Byb3ZpZGVycxgEIAMoCzIaLmVhc3lwb3VyLnYxLk9BdXRoUHJvdmlkZXIy6wMKD0Vhc3lQb3VyU2VydmljZRJGCgdHZXRNZW51EhsuZWFzeXBvdXIudjEuR2V0TWVudVJlcXVlc3QaHC5lYXN5cG91ci52MS5HZXRNZW51UmVzcG9uc2UiABJFCgpPcmRlckRyaW5rEhkuZWFzeXBvdXIudjEuT3JkZXJSZXF1ZXN0GhouZWFzeXBvdXIudjEuT3JkZXJSZXNwb25zZSIAElsKDkdldEN1cnJlbnRVc2VyEiIuZWFzeXBvdXIudjEuR2V0Q3VycmVudFVzZXJSZXF1ZXN0GiMuZWFzeXBvdXIudjEuR2V0Q3VycmVudFVzZXJSZXNwb25zZSIAEk0KDkNyZWF0ZU1lbnVJdGVtEiIuZWFzeXBvdXIudjEuQ3JlYXRlTWVudUl0ZW1SZXF1ZXN0GhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iABJNCg5VcGRhdGVNZW51SXRlbRIiLmVhc3lwb3VyLnYxLlVwZGF0ZU1lbnVJdGVtUmVxdWVzdBoVLmVhc3lwb3VyLnYxLk1lbnVJdGVtIgASTgoORGVsZXRlTWVudUl0ZW0SIi5lYXN5cG91ci52MS5EZWxldGVNZW51SXRlbVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkiAEItWitlYXN5cG91ci9zZXJ2aWNlL2dlbi9lYXN5cG91ci92MTtlYXN5cG91cnYxYgZwcm90bzM", [file_google_protobuf_empty]);
 
 /**
  * OrderRequest represents a request to order a menu item (beverage or food)
@@ -285,7 +285,43 @@ export const GetCurrentUserRequestSchema: GenMessage<GetCurrentUserRequest> = /*
   messageDesc(file_easypour_v1_easypour, 8);
 
 /**
- * GetCurrentUserResponse returns the authenticated user when auth is enabled
+ * OAuthProvider describes a configured OAuth2 login provider for the login form
+ *
+ * @generated from message easypour.v1.OAuthProvider
+ */
+export type OAuthProvider = Message<"easypour.v1.OAuthProvider"> & {
+  /**
+   * provider id, e.g. "google", "github"
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * display name, e.g. "Google", "GitHub"
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * URL to start OAuth2 flow (redirect or link)
+   *
+   * @generated from field: string auth_url = 3;
+   */
+  authUrl: string;
+};
+
+/**
+ * Describes the message easypour.v1.OAuthProvider.
+ * Use `create(OAuthProviderSchema)` to create a new message.
+ */
+export const OAuthProviderSchema: GenMessage<OAuthProvider> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 9);
+
+/**
+ * GetCurrentUserResponse returns the authenticated user when auth is enabled,
+ * and the list of configured OAuth2 providers for the login form (callable unauthenticated).
  *
  * @generated from message easypour.v1.GetCurrentUserResponse
  */
@@ -306,6 +342,11 @@ export type GetCurrentUserResponse = Message<"easypour.v1.GetCurrentUserResponse
    * @generated from field: bool is_admin = 3;
    */
   isAdmin: boolean;
+
+  /**
+   * @generated from field: repeated easypour.v1.OAuthProvider oauth_providers = 4;
+   */
+  oauthProviders: OAuthProvider[];
 };
 
 /**
@@ -313,7 +354,7 @@ export type GetCurrentUserResponse = Message<"easypour.v1.GetCurrentUserResponse
  * Use `create(GetCurrentUserResponseSchema)` to create a new message.
  */
 export const GetCurrentUserResponseSchema: GenMessage<GetCurrentUserResponse> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 9);
+  messageDesc(file_easypour_v1_easypour, 10);
 
 /**
  * EasyPourService provides methods for the menu and orders

@@ -159,12 +159,13 @@ const addToBasket = () => {
 .customize-dialog {
   padding: 0;
   border: none;
-  max-width: 100vw;
+  max-width: 480px;
   box-sizing: border-box;
 }
 
 @media (max-width: 767px) {
   .customize-dialog {
+	max-width: 100vw;
     margin-top: 1em;
     margin-bottom: auto;
     max-height: calc(100vh - 1em);

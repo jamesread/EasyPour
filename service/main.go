@@ -38,6 +38,7 @@ type EasyPourServer struct {
 	menuStore      *menu.Store
 	webhooks       []config.Webhook
 	webhookClient  *http.Client // skips TLS cert verification for webhook POSTs
+	oauthProviders []*easypourv1.OAuthProvider // configured OAuth2 providers for login form
 }
 
 // GetMenu returns the available drinks menu from the YAML store
@@ -206,12 +207,16 @@ func (s *EasyPourServer) postWebhookWithRetry(url string, body []byte) {
 	log.Printf("Webhook %s failed after %d attempts: %v", url, webhookMaxRetries, lastErr)
 }
 
-// GetCurrentUser returns the authenticated user when auth is enabled (including is_admin for "admin" group)
+// GetCurrentUser returns the authenticated user when auth is enabled (including is_admin for "admin" group),
+// and the list of configured OAuth2 providers for the login form. Callable unauthenticated to obtain providers.
 func (s *EasyPourServer) GetCurrentUser(
 	ctx context.Context,
 	req *connect.Request[easypourv1.GetCurrentUserRequest],
 ) (*connect.Response[easypourv1.GetCurrentUserResponse], error) {
 	resp := &easypourv1.GetCurrentUserResponse{}
+	if s.oauthProviders != nil {
+		resp.OauthProviders = s.oauthProviders
+	}
 	if s.authCtx == nil {
 		return connect.NewResponse(resp), nil
 	}
@@ -372,8 +377,14 @@ func handleUpload(authCtx *auth.AuthShimContext, imagesDir string) http.HandlerF
 
 // withAuth wraps an http.Handler with httpauthshim authentication (session-based).
 // Unauthenticated requests receive 401 without WWW-Authenticate so the browser does not show Basic auth.
+// GetCurrentUser is allowed without auth so the login form can fetch the user and OAuth provider list.
 func withAuth(authCtx *auth.AuthShimContext, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == easypourv1connect.EasyPourServiceGetCurrentUserProcedure {
+			ctx := context.WithValue(r.Context(), httpRequestKey, r)
+			h.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
 		user := authCtx.AuthFromHttpReq(r)
 		if user == nil || user.IsGuest() {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -450,6 +461,27 @@ func handleLogin(authCtx *auth.AuthShimContext) http.HandlerFunc {
 		})
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"username": username})
+	}
+}
+
+// handleLogout clears the session cookie so the client is logged out.
+func handleLogout(authCtx *auth.AuthShimContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		cookieName := authCtx.Config.GetLocalSessionCookieName()
+		http.SetCookie(w, &http.Cookie{
+			Name:     cookieName,
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   -1,
+		})
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"ok": "true"})
 	}
 }
 
@@ -598,11 +630,22 @@ func main() {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
+	var oauthProviders []*easypourv1.OAuthProvider
+	for _, p := range appCfg.OAuthProviders {
+		if p.ID != "" && p.Name != "" && p.AuthURL != "" {
+			oauthProviders = append(oauthProviders, &easypourv1.OAuthProvider{
+				Id:      p.ID,
+				Name:    p.Name,
+				AuthUrl: p.AuthURL,
+			})
+		}
+	}
 	server := &EasyPourServer{
-		authCtx:       authCtx,
-		menuStore:     menuStore,
-		webhooks:      appCfg.Webhooks,
-		webhookClient: webhookClient,
+		authCtx:        authCtx,
+		menuStore:      menuStore,
+		webhooks:       appCfg.Webhooks,
+		webhookClient:  webhookClient,
+		oauthProviders: oauthProviders,
 	}
 	mux := http.NewServeMux()
 	staticDir := getStaticDir()
@@ -613,6 +656,7 @@ func main() {
 	}
 	if authCtx != nil {
 		mux.Handle("/login", loginOrSPA(authCtx, spaHandler))
+		mux.HandleFunc("/logout", handleLogout(authCtx))
 		imagesDir := filepath.Join(filepath.Dir(menuPath), "images")
 		mux.HandleFunc("/upload", handleUpload(authCtx, imagesDir))
 		mux.Handle("/images/", http.StripPrefix("/images", http.FileServer(http.Dir(imagesDir))))
