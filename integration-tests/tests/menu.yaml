@@ -1,0 +1,22 @@
+items:
+    - id: coffee
+      name: Coffee
+      description: Freshly brewed coffee
+      supports_sugar: true
+      supports_milk: true
+      image_url: ""
+      category: Drinks
+    - id: tea
+      name: Tea
+      description: Hot tea
+      supports_sugar: true
+      supports_milk: true
+      image_url: ""
+      category: Drinks
+    - id: hot-chocolate
+      name: Hot Chocolate
+      description: Rich hot chocolate
+      supports_sugar: false
+      supports_milk: true
+      image_url: ""
+      category: Drinks

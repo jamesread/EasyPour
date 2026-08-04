@@ -8,16 +8,17 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	auth "github.com/jamesread/httpauthshim"
+	"github.com/sirupsen/logrus"
 	"github.com/jamesread/httpauthshim/authpublic"
 	"github.com/jamesread/httpauthshim/providers/haslocal"
 	"github.com/jamesread/httpauthshim/sessions"
@@ -25,20 +26,127 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"easypour/service/buildinfo"
 	"easypour/service/internal/config"
 	"easypour/service/internal/menu"
+	"easypour/service/internal/order"
 	easypourv1 "easypour/service/gen/easypour/v1"
 	"easypour/service/gen/easypour/v1/easypourv1connect"
 )
+
+// orderEvent is sent to SSE clients on status update.
+type orderEvent struct {
+	Type    string `json:"type"`
+	OrderID string `json:"order_id"`
+	Status  string `json:"status"`
+}
+
+// sseBroadcaster sends order status updates to all connected SSE clients.
+type sseBroadcaster struct {
+	mu      sync.Mutex
+	clients map[chan []byte]struct{}
+}
+
+func newSSEBroadcaster() *sseBroadcaster {
+	return &sseBroadcaster{clients: make(map[chan []byte]struct{})}
+}
+
+func (b *sseBroadcaster) Subscribe() chan []byte {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	ch := make(chan []byte, 8)
+	b.clients[ch] = struct{}{}
+	return ch
+}
+
+func (b *sseBroadcaster) Unsubscribe(ch chan []byte) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	delete(b.clients, ch)
+	close(ch)
+}
+
+func (b *sseBroadcaster) Broadcast(data []byte) {
+	b.mu.Lock()
+	clients := make([]chan []byte, 0, len(b.clients))
+	for ch := range b.clients {
+		clients = append(clients, ch)
+	}
+	b.mu.Unlock()
+	for _, ch := range clients {
+		select {
+		case ch <- data:
+		default:
+		}
+	}
+}
+
+const sseKeepaliveInterval = 30 * time.Second
+
+// handleSSEOrderEvents serves GET /orders/events as text/event-stream; subscribes to broadcaster and sends keepalives every 30s.
+func handleSSEOrderEvents(broadcast *sseBroadcaster) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+		ch := broadcast.Subscribe()
+		defer broadcast.Unsubscribe(ch)
+		ctx := r.Context()
+		keepalive := time.NewTicker(sseKeepaliveInterval)
+		defer keepalive.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case data, ok := <-ch:
+				if !ok {
+					return
+				}
+				if _, err := w.Write(append(append([]byte("data: "), data...), '\n', '\n')); err != nil {
+					return
+				}
+				flusher.Flush()
+			case <-keepalive.C:
+				if _, err := w.Write([]byte(": keepalive\n\n")); err != nil {
+					return
+				}
+				flusher.Flush()
+			}
+		}
+	}
+}
 
 // EasyPourServer implements the EasyPourService
 type EasyPourServer struct {
 	easypourv1connect.UnimplementedEasyPourServiceHandler
 	authCtx        *auth.AuthShimContext
 	menuStore      *menu.Store
+	orderStore     *order.Store
 	webhooks       []config.Webhook
 	webhookClient  *http.Client // skips TLS cert verification for webhook POSTs
 	oauthProviders []*easypourv1.OAuthProvider // configured OAuth2 providers for login form
+	sseBroadcast   *sseBroadcaster
+}
+
+// Init returns app version and configured OAuth2 providers. Callable unauthenticated.
+func (s *EasyPourServer) Init(
+	ctx context.Context,
+	req *connect.Request[easypourv1.InitRequest],
+) (*connect.Response[easypourv1.InitResponse], error) {
+	resp := &easypourv1.InitResponse{Version: buildinfo.Version}
+	if s.oauthProviders != nil {
+		resp.OauthProviders = s.oauthProviders
+	}
+	return connect.NewResponse(resp), nil
 }
 
 // GetMenu returns the available drinks menu from the YAML store
@@ -92,31 +200,74 @@ func formatWebhookItemString(name string, addSugar, addMilk bool, sugarAmount, m
 	return fmt.Sprintf("%s (%s, %s)", name, sugarPart, milkPart)
 }
 
-// OrderDrink places an order for a drink
+// getUsernameFromContext returns the authenticated username, or "" if auth disabled or guest.
+func (s *EasyPourServer) getUsernameFromContext(ctx context.Context) string {
+	if s.authCtx == nil {
+		return ""
+	}
+	httpReq, _ := ctx.Value(httpRequestKey).(*http.Request)
+	if httpReq == nil {
+		return ""
+	}
+	user := s.authCtx.AuthFromHttpReq(httpReq)
+	if user == nil || user.IsGuest() {
+		return ""
+	}
+	return user.Username
+}
+
+// requireAuth returns the authenticated user or error. Used by RPCs that need any logged-in user.
+func (s *EasyPourServer) requireAuth(ctx context.Context) (*authpublic.AuthenticatedUser, error) {
+	if s.authCtx == nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("auth required"))
+	}
+	httpReq, _ := ctx.Value(httpRequestKey).(*http.Request)
+	if httpReq == nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("request context missing"))
+	}
+	user := s.authCtx.AuthFromHttpReq(httpReq)
+	if user == nil || user.IsGuest() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("login required"))
+	}
+	return user, nil
+}
+
+// OrderDrink places an order for a drink and persists it with status "pending".
 func (s *EasyPourServer) OrderDrink(
 	ctx context.Context,
 	req *connect.Request[easypourv1.OrderRequest],
 ) (*connect.Response[easypourv1.OrderResponse], error) {
 	orderReq := req.Msg
 
-	// Generate order ID
 	orderID := uuid.New().String()
-	createdAt := time.Now().Unix()
+	username := s.getUsernameFromContext(ctx)
 
-	// Create response
-	response := &easypourv1.OrderResponse{
-		OrderId:     orderID,
-		MenuItemId:  orderReq.MenuItemId,
+	o := &order.Order{
+		ID:          orderID,
+		MenuItemID:  orderReq.MenuItemId,
+		Username:    username,
 		AddSugar:    orderReq.AddSugar,
 		AddMilk:     orderReq.AddMilk,
 		SugarAmount: orderReq.SugarAmount,
 		MilkAmount:  orderReq.MilkAmount,
-		Status:      "preparing",
-		CreatedAt:   createdAt,
+		Status:      "pending",
+	}
+	if err := s.orderStore.Create(o); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create order: %w", err))
 	}
 
-	// In a real implementation, you would queue this order for preparation
-	log.Printf("Order received: %s - item %s (Sugar: %v, Milk: %v)",
+	response := &easypourv1.OrderResponse{
+		OrderId:     o.ID,
+		MenuItemId:  o.MenuItemID,
+		AddSugar:    o.AddSugar,
+		AddMilk:     o.AddMilk,
+		SugarAmount: o.SugarAmount,
+		MilkAmount:  o.MilkAmount,
+		Status:      o.Status,
+		CreatedAt:   o.CreatedAt,
+	}
+
+	logrus.Infof("Order received: %s - item %s (Sugar: %v, Milk: %v)",
 		orderID, orderReq.MenuItemId, orderReq.AddSugar, orderReq.AddMilk)
 
 	// Send order details to configured webhooks (fire-and-forget, with retries)
@@ -127,7 +278,7 @@ func (s *EasyPourServer) OrderDrink(
 		}
 	}
 	if nWebhooks > 0 {
-		log.Printf("Sending order %s to %d webhook(s)", orderID, nWebhooks)
+		logrus.Infof("Sending order %s to %d webhook(s)", orderID, nWebhooks)
 		itemName := orderReq.MenuItemId
 		if menuItems, err := s.menuStore.Load(); err == nil {
 			for _, it := range menuItems {
@@ -148,8 +299,8 @@ func (s *EasyPourServer) OrderDrink(
 		orderString := formatWebhookItemString(itemName, orderReq.AddSugar, orderReq.AddMilk, orderReq.SugarAmount, orderReq.MilkAmount)
 		payload := orderWebhookPayload{
 			OrderId:     orderID,
-			Status:      "preparing",
-			CreatedAt:   createdAt,
+			Status:      "pending",
+			CreatedAt:   o.CreatedAt,
 			OrderString: orderString,
 			Items:       []webhookItem{wi},
 		}
@@ -185,6 +336,7 @@ func (s *EasyPourServer) postWebhookWithRetry(url string, body []byte) {
 			time.Sleep(delay)
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), webhookTimeout)
+		defer cancel()
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 		if err != nil {
 			lastErr = err
@@ -192,7 +344,6 @@ func (s *EasyPourServer) postWebhookWithRetry(url string, body []byte) {
 		}
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := s.webhookClient.Do(req)
-		cancel()
 		if err != nil {
 			lastErr = err
 			continue
@@ -204,7 +355,7 @@ func (s *EasyPourServer) postWebhookWithRetry(url string, body []byte) {
 		}
 		lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
-	log.Printf("Webhook %s failed after %d attempts: %v", url, webhookMaxRetries, lastErr)
+	logrus.Warnf("Webhook %s failed after %d attempts: %v", url, webhookMaxRetries, lastErr)
 }
 
 // GetCurrentUser returns the authenticated user when auth is enabled (including is_admin for "admin" group),
@@ -318,6 +469,147 @@ func (s *EasyPourServer) DeleteMenuItem(
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
+// GetOrder returns a single order by id. Caller must own the order or be admin.
+func (s *EasyPourServer) GetOrder(
+	ctx context.Context,
+	req *connect.Request[easypourv1.GetOrderRequest],
+) (*connect.Response[easypourv1.GetOrderResponse], error) {
+	if _, err := s.requireAuth(ctx); err != nil {
+		return nil, err
+	}
+	orderID := req.Msg.GetOrderId()
+	if orderID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("order_id required"))
+	}
+	o, err := s.orderStore.Get(orderID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get order: %w", err))
+	}
+	if o == nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("order not found"))
+	}
+	username := s.getUsernameFromContext(ctx)
+	if !userInAdminGroupFromContext(s.authCtx, ctx) && o.Username != username {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("not your order"))
+	}
+	return connect.NewResponse(&easypourv1.GetOrderResponse{Order: o.ToProto()}), nil
+}
+
+// ListOrders returns orders for the caller (own) or all orders if admin.
+func (s *EasyPourServer) ListOrders(
+	ctx context.Context,
+	req *connect.Request[easypourv1.ListOrdersRequest],
+) (*connect.Response[easypourv1.ListOrdersResponse], error) {
+	user, err := s.requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+	username := user.Username
+	isAdmin := userInAdminGroup(user)
+	list, err := s.orderStore.List(username, isAdmin)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list orders: %w", err))
+	}
+	orders := make([]*easypourv1.Order, 0, len(list))
+	for _, o := range list {
+		orders = append(orders, o.ToProto())
+	}
+	return connect.NewResponse(&easypourv1.ListOrdersResponse{Orders: orders}), nil
+}
+
+var allowedStatuses = map[string]bool{"pending": true, "preparing": true, "delivered": true}
+
+// validOrderStatusTransition returns true if the status change is allowed; pending→preparing is admin-only.
+func validOrderStatusTransition(from, to string, isAdmin bool) bool {
+	if !allowedStatuses[from] || !allowedStatuses[to] {
+		return false
+	}
+	if from == to {
+		return false
+	}
+	switch from {
+	case "pending":
+		if to == "preparing" {
+			return isAdmin
+		}
+		return to == "delivered"
+	case "preparing":
+		return to == "delivered"
+	case "delivered":
+		return false
+	default:
+		return false
+	}
+}
+
+// canUpdateOrderStatus returns true if the user can set the order to the new status (admin can do pending->preparing; user can only set delivered on own order).
+func (s *EasyPourServer) canUpdateOrderStatus(ctx context.Context, o *order.Order, newStatus string) bool {
+	user, err := s.requireAuth(ctx)
+	if err != nil {
+		return false
+	}
+	isAdmin := userInAdminGroup(user)
+	if isAdmin {
+		return validOrderStatusTransition(o.Status, newStatus, true)
+	}
+	if o.Username != user.Username {
+		return false
+	}
+	return newStatus == "delivered" && validOrderStatusTransition(o.Status, "delivered", false)
+}
+
+// UpdateOrderStatus updates an order's status and broadcasts the change via SSE.
+func (s *EasyPourServer) UpdateOrderStatus(
+	ctx context.Context,
+	req *connect.Request[easypourv1.UpdateOrderStatusRequest],
+) (*connect.Response[easypourv1.UpdateOrderStatusResponse], error) {
+	if _, err := s.requireAuth(ctx); err != nil {
+		return nil, err
+	}
+	orderID := req.Msg.GetOrderId()
+	status := strings.TrimSpace(strings.ToLower(req.Msg.GetStatus()))
+	if orderID == "" || status == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("order_id and status required"))
+	}
+	if !allowedStatuses[status] {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("status must be pending, preparing, or delivered"))
+	}
+	o, err := s.orderStore.Get(orderID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get order: %w", err))
+	}
+	if o == nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("order not found"))
+	}
+	if !s.canUpdateOrderStatus(ctx, o, status) {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("cannot update order status"))
+	}
+	updated, err := s.orderStore.UpdateStatus(orderID, status)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update status: %w", err))
+	}
+	if updated == nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("order not found"))
+	}
+	ev := orderEvent{Type: "status_update", OrderID: updated.ID, Status: updated.Status}
+	data, _ := json.Marshal(ev)
+	s.sseBroadcast.Broadcast(data)
+	return connect.NewResponse(&easypourv1.UpdateOrderStatusResponse{Order: updated.ToProto()}), nil
+}
+
+// userInAdminGroupFromContext returns true if the request user is in the admin group (for use when we already have ctx but not *AuthenticatedUser).
+func userInAdminGroupFromContext(authCtx *auth.AuthShimContext, ctx context.Context) bool {
+	if authCtx == nil {
+		return false
+	}
+	httpReq, _ := ctx.Value(httpRequestKey).(*http.Request)
+	if httpReq == nil {
+		return false
+	}
+	user := authCtx.AuthFromHttpReq(httpReq)
+	return user != nil && userInAdminGroup(user)
+}
+
 // context key for storing *http.Request (used by handlers that need auth identity)
 type contextKey string
 
@@ -380,7 +672,8 @@ func handleUpload(authCtx *auth.AuthShimContext, imagesDir string) http.HandlerF
 // GetCurrentUser is allowed without auth so the login form can fetch the user and OAuth provider list.
 func withAuth(authCtx *auth.AuthShimContext, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == easypourv1connect.EasyPourServiceGetCurrentUserProcedure {
+		if r.URL.Path == easypourv1connect.EasyPourServiceInitProcedure ||
+			r.URL.Path == easypourv1connect.EasyPourServiceGetCurrentUserProcedure {
 			ctx := context.WithValue(r.Context(), httpRequestKey, r)
 			h.ServeHTTP(w, r.WithContext(ctx))
 			return
@@ -564,7 +857,7 @@ func setupAuth(appConfig *config.Config) (*auth.AuthShimContext, error) {
 		return nil, nil
 	}
 	if len(authCfg.LocalUsers.Users) == 0 {
-		log.Print("Auth enabled but no users configured; auth disabled")
+		logrus.Warn("Auth enabled but no users configured; auth disabled")
 		return nil, nil
 	}
 	sessionStorage := sessions.NewSessionStorage(sessions.NewYAMLPersistence())
@@ -573,13 +866,17 @@ func setupAuth(appConfig *config.Config) (*auth.AuthShimContext, error) {
 		return nil, err
 	}
 	authCtx.AddProvider(haslocal.CheckUserFromLocalSession)
-	log.Print("Authentication enabled (httpauthshim, session-based login)")
+	logrus.Info("Authentication enabled (httpauthshim, session-based login)")
 	return authCtx, nil
 }
 
 func main() {
 	hashPassword := flag.String("hash-password", "", "generate Argon2id hash for a password and exit (use in config.yaml auth.localUsers.users[].password)")
+	configDir := flag.String("configdir", "", "directory containing config.yaml (for integration tests)")
 	flag.Parse()
+	if *configDir != "" {
+		config.SetConfigDir(*configDir)
+	}
 	if *hashPassword != "" {
 		hash, err := haslocal.CreateHash(*hashPassword)
 		if err != nil {
@@ -593,19 +890,19 @@ func main() {
 	appCfg := config.LoadConfig()
 	cfgPath := config.GetConfigPath()
 	if cfgPath != "" {
-		log.Printf("Config loaded from %s; %d webhook(s) configured", cfgPath, len(appCfg.Webhooks))
+		logrus.Infof("Config loaded from %s; %d webhook(s) configured", cfgPath, len(appCfg.Webhooks))
 	} else {
-		log.Printf("No config file found; using defaults (%d webhooks)", len(appCfg.Webhooks))
+		logrus.Infof("No config file found; using defaults (%d webhooks)", len(appCfg.Webhooks))
 	}
 
 	authCtx, err := setupAuth(appCfg)
 	if err != nil {
-		log.Fatalf("Setup auth failed: %v", err)
+		logrus.Fatalf("Setup auth failed: %v", err)
 	}
 	if authCtx != nil {
 		defer func() {
 			if err := authCtx.Shutdown(); err != nil {
-				log.Printf("Auth shutdown error: %v", err)
+				logrus.Warnf("Auth shutdown error: %v", err)
 			}
 		}()
 	}
@@ -614,15 +911,27 @@ func main() {
 	menuStore := menu.NewStore(menuPath)
 	items, err := menuStore.Load()
 	if err != nil {
-		log.Fatalf("Load menu: %v", err)
+		logrus.Fatalf("Load menu: %v", err)
 	}
 	if _, statErr := os.Stat(menuPath); statErr != nil && os.IsNotExist(statErr) {
 		if err := menuStore.Save(items); err != nil {
-			log.Printf("Write default menu: %v", err)
+			logrus.Warnf("Write default menu: %v", err)
 		} else {
-			log.Printf("Created default menu at %s", menuPath)
+			logrus.Infof("Created default menu at %s", menuPath)
 		}
 	}
+
+	ordersDBPath := order.GetOrdersDBPath(cfgPath)
+	orderStore, err := order.NewStore(ordersDBPath)
+	if err != nil {
+		logrus.Fatalf("Open order store: %v", err)
+	}
+	defer orderStore.Close()
+	if err := orderStore.Init(); err != nil {
+		logrus.Fatalf("Init order store: %v", err)
+	}
+
+	sseBroadcast := newSSEBroadcaster()
 
 	webhookClient := &http.Client{
 		Timeout: webhookTimeout,
@@ -643,16 +952,18 @@ func main() {
 	server := &EasyPourServer{
 		authCtx:        authCtx,
 		menuStore:      menuStore,
+		orderStore:     orderStore,
 		webhooks:       appCfg.Webhooks,
 		webhookClient:  webhookClient,
 		oauthProviders: oauthProviders,
+		sseBroadcast:   sseBroadcast,
 	}
 	mux := http.NewServeMux()
 	staticDir := getStaticDir()
 	var spaHandler http.Handler
 	if staticDir != "" {
 		spaHandler = spaFileServer(staticDir)
-		log.Printf("Serving frontend from %s", staticDir)
+		logrus.Infof("Serving frontend from %s", staticDir)
 	}
 	if authCtx != nil {
 		mux.Handle("/login", loginOrSPA(authCtx, spaHandler))
@@ -660,6 +971,9 @@ func main() {
 		imagesDir := filepath.Join(filepath.Dir(menuPath), "images")
 		mux.HandleFunc("/upload", handleUpload(authCtx, imagesDir))
 		mux.Handle("/images/", http.StripPrefix("/images", http.FileServer(http.Dir(imagesDir))))
+		mux.Handle("/orders/events", withAuth(authCtx, handleSSEOrderEvents(sseBroadcast)))
+	} else {
+		mux.Handle("/orders/events", handleSSEOrderEvents(sseBroadcast))
 	}
 	path, handler := easypourv1connect.NewEasyPourServiceHandler(server)
 	if authCtx != nil {
@@ -672,16 +986,16 @@ func main() {
 	}
 
 	addr := ":9654"
-	log.Printf("Starting EasyPour service on %s", addr)
-	log.Printf("ConnectRPC endpoint: http://localhost%s%s", addr, path)
+	logrus.Infof("Starting EasyPour service on %s", addr)
+	logrus.Infof("ConnectRPC endpoint: http://localhost%s%s", addr, path)
 	if authCtx != nil {
-		log.Print("API requires authentication (HTTP Basic or configured providers)")
+		logrus.Info("API requires authentication (HTTP Basic or configured providers)")
 	}
 
 	if err := http.ListenAndServe(
 		addr,
 		h2c.NewHandler(mux, &http2.Server{}),
 	); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+		logrus.Fatalf("Server failed to start: %v", err)
 	}
 }

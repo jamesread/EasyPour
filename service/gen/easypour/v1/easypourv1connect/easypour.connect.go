@@ -34,6 +34,8 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// EasyPourServiceInitProcedure is the fully-qualified name of the EasyPourService's Init RPC.
+	EasyPourServiceInitProcedure = "/easypour.v1.EasyPourService/Init"
 	// EasyPourServiceGetMenuProcedure is the fully-qualified name of the EasyPourService's GetMenu RPC.
 	EasyPourServiceGetMenuProcedure = "/easypour.v1.EasyPourService/GetMenu"
 	// EasyPourServiceOrderDrinkProcedure is the fully-qualified name of the EasyPourService's
@@ -51,10 +53,21 @@ const (
 	// EasyPourServiceDeleteMenuItemProcedure is the fully-qualified name of the EasyPourService's
 	// DeleteMenuItem RPC.
 	EasyPourServiceDeleteMenuItemProcedure = "/easypour.v1.EasyPourService/DeleteMenuItem"
+	// EasyPourServiceGetOrderProcedure is the fully-qualified name of the EasyPourService's GetOrder
+	// RPC.
+	EasyPourServiceGetOrderProcedure = "/easypour.v1.EasyPourService/GetOrder"
+	// EasyPourServiceListOrdersProcedure is the fully-qualified name of the EasyPourService's
+	// ListOrders RPC.
+	EasyPourServiceListOrdersProcedure = "/easypour.v1.EasyPourService/ListOrders"
+	// EasyPourServiceUpdateOrderStatusProcedure is the fully-qualified name of the EasyPourService's
+	// UpdateOrderStatus RPC.
+	EasyPourServiceUpdateOrderStatusProcedure = "/easypour.v1.EasyPourService/UpdateOrderStatus"
 )
 
 // EasyPourServiceClient is a client for the easypour.v1.EasyPourService service.
 type EasyPourServiceClient interface {
+	// Init returns app version and configured OAuth2 providers. Callable unauthenticated on load.
+	Init(context.Context, *connect.Request[v1.InitRequest]) (*connect.Response[v1.InitResponse], error)
 	// GetMenu returns the menu (beverages, food, etc.)
 	GetMenu(context.Context, *connect.Request[v1.GetMenuRequest]) (*connect.Response[v1.GetMenuResponse], error)
 	// OrderDrink places an order for a menu item
@@ -67,6 +80,12 @@ type EasyPourServiceClient interface {
 	UpdateMenuItem(context.Context, *connect.Request[v1.UpdateMenuItemRequest]) (*connect.Response[v1.MenuItem], error)
 	// DeleteMenuItem removes a menu item by id (admin only).
 	DeleteMenuItem(context.Context, *connect.Request[v1.DeleteMenuItemRequest]) (*connect.Response[emptypb.Empty], error)
+	// GetOrder returns a single order by id. Requires auth; caller must own order or be admin.
+	GetOrder(context.Context, *connect.Request[v1.GetOrderRequest]) (*connect.Response[v1.GetOrderResponse], error)
+	// ListOrders returns orders for the caller (own orders) or all orders if admin. Requires auth.
+	ListOrders(context.Context, *connect.Request[v1.ListOrdersRequest]) (*connect.Response[v1.ListOrdersResponse], error)
+	// UpdateOrderStatus updates an order's status. Requires auth; admin can set preparing/delivered, user can set delivered for own orders.
+	UpdateOrderStatus(context.Context, *connect.Request[v1.UpdateOrderStatusRequest]) (*connect.Response[v1.UpdateOrderStatusResponse], error)
 }
 
 // NewEasyPourServiceClient constructs a client for the easypour.v1.EasyPourService service. By
@@ -80,6 +99,12 @@ func NewEasyPourServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 	baseURL = strings.TrimRight(baseURL, "/")
 	easyPourServiceMethods := v1.File_easypour_v1_easypour_proto.Services().ByName("EasyPourService").Methods()
 	return &easyPourServiceClient{
+		init: connect.NewClient[v1.InitRequest, v1.InitResponse](
+			httpClient,
+			baseURL+EasyPourServiceInitProcedure,
+			connect.WithSchema(easyPourServiceMethods.ByName("Init")),
+			connect.WithClientOptions(opts...),
+		),
 		getMenu: connect.NewClient[v1.GetMenuRequest, v1.GetMenuResponse](
 			httpClient,
 			baseURL+EasyPourServiceGetMenuProcedure,
@@ -116,17 +141,44 @@ func NewEasyPourServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(easyPourServiceMethods.ByName("DeleteMenuItem")),
 			connect.WithClientOptions(opts...),
 		),
+		getOrder: connect.NewClient[v1.GetOrderRequest, v1.GetOrderResponse](
+			httpClient,
+			baseURL+EasyPourServiceGetOrderProcedure,
+			connect.WithSchema(easyPourServiceMethods.ByName("GetOrder")),
+			connect.WithClientOptions(opts...),
+		),
+		listOrders: connect.NewClient[v1.ListOrdersRequest, v1.ListOrdersResponse](
+			httpClient,
+			baseURL+EasyPourServiceListOrdersProcedure,
+			connect.WithSchema(easyPourServiceMethods.ByName("ListOrders")),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrderStatus: connect.NewClient[v1.UpdateOrderStatusRequest, v1.UpdateOrderStatusResponse](
+			httpClient,
+			baseURL+EasyPourServiceUpdateOrderStatusProcedure,
+			connect.WithSchema(easyPourServiceMethods.ByName("UpdateOrderStatus")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // easyPourServiceClient implements EasyPourServiceClient.
 type easyPourServiceClient struct {
-	getMenu        *connect.Client[v1.GetMenuRequest, v1.GetMenuResponse]
-	orderDrink     *connect.Client[v1.OrderRequest, v1.OrderResponse]
-	getCurrentUser *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
-	createMenuItem *connect.Client[v1.CreateMenuItemRequest, v1.MenuItem]
-	updateMenuItem *connect.Client[v1.UpdateMenuItemRequest, v1.MenuItem]
-	deleteMenuItem *connect.Client[v1.DeleteMenuItemRequest, emptypb.Empty]
+	init              *connect.Client[v1.InitRequest, v1.InitResponse]
+	getMenu           *connect.Client[v1.GetMenuRequest, v1.GetMenuResponse]
+	orderDrink        *connect.Client[v1.OrderRequest, v1.OrderResponse]
+	getCurrentUser    *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
+	createMenuItem    *connect.Client[v1.CreateMenuItemRequest, v1.MenuItem]
+	updateMenuItem    *connect.Client[v1.UpdateMenuItemRequest, v1.MenuItem]
+	deleteMenuItem    *connect.Client[v1.DeleteMenuItemRequest, emptypb.Empty]
+	getOrder          *connect.Client[v1.GetOrderRequest, v1.GetOrderResponse]
+	listOrders        *connect.Client[v1.ListOrdersRequest, v1.ListOrdersResponse]
+	updateOrderStatus *connect.Client[v1.UpdateOrderStatusRequest, v1.UpdateOrderStatusResponse]
+}
+
+// Init calls easypour.v1.EasyPourService.Init.
+func (c *easyPourServiceClient) Init(ctx context.Context, req *connect.Request[v1.InitRequest]) (*connect.Response[v1.InitResponse], error) {
+	return c.init.CallUnary(ctx, req)
 }
 
 // GetMenu calls easypour.v1.EasyPourService.GetMenu.
@@ -159,8 +211,25 @@ func (c *easyPourServiceClient) DeleteMenuItem(ctx context.Context, req *connect
 	return c.deleteMenuItem.CallUnary(ctx, req)
 }
 
+// GetOrder calls easypour.v1.EasyPourService.GetOrder.
+func (c *easyPourServiceClient) GetOrder(ctx context.Context, req *connect.Request[v1.GetOrderRequest]) (*connect.Response[v1.GetOrderResponse], error) {
+	return c.getOrder.CallUnary(ctx, req)
+}
+
+// ListOrders calls easypour.v1.EasyPourService.ListOrders.
+func (c *easyPourServiceClient) ListOrders(ctx context.Context, req *connect.Request[v1.ListOrdersRequest]) (*connect.Response[v1.ListOrdersResponse], error) {
+	return c.listOrders.CallUnary(ctx, req)
+}
+
+// UpdateOrderStatus calls easypour.v1.EasyPourService.UpdateOrderStatus.
+func (c *easyPourServiceClient) UpdateOrderStatus(ctx context.Context, req *connect.Request[v1.UpdateOrderStatusRequest]) (*connect.Response[v1.UpdateOrderStatusResponse], error) {
+	return c.updateOrderStatus.CallUnary(ctx, req)
+}
+
 // EasyPourServiceHandler is an implementation of the easypour.v1.EasyPourService service.
 type EasyPourServiceHandler interface {
+	// Init returns app version and configured OAuth2 providers. Callable unauthenticated on load.
+	Init(context.Context, *connect.Request[v1.InitRequest]) (*connect.Response[v1.InitResponse], error)
 	// GetMenu returns the menu (beverages, food, etc.)
 	GetMenu(context.Context, *connect.Request[v1.GetMenuRequest]) (*connect.Response[v1.GetMenuResponse], error)
 	// OrderDrink places an order for a menu item
@@ -173,6 +242,12 @@ type EasyPourServiceHandler interface {
 	UpdateMenuItem(context.Context, *connect.Request[v1.UpdateMenuItemRequest]) (*connect.Response[v1.MenuItem], error)
 	// DeleteMenuItem removes a menu item by id (admin only).
 	DeleteMenuItem(context.Context, *connect.Request[v1.DeleteMenuItemRequest]) (*connect.Response[emptypb.Empty], error)
+	// GetOrder returns a single order by id. Requires auth; caller must own order or be admin.
+	GetOrder(context.Context, *connect.Request[v1.GetOrderRequest]) (*connect.Response[v1.GetOrderResponse], error)
+	// ListOrders returns orders for the caller (own orders) or all orders if admin. Requires auth.
+	ListOrders(context.Context, *connect.Request[v1.ListOrdersRequest]) (*connect.Response[v1.ListOrdersResponse], error)
+	// UpdateOrderStatus updates an order's status. Requires auth; admin can set preparing/delivered, user can set delivered for own orders.
+	UpdateOrderStatus(context.Context, *connect.Request[v1.UpdateOrderStatusRequest]) (*connect.Response[v1.UpdateOrderStatusResponse], error)
 }
 
 // NewEasyPourServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -182,6 +257,12 @@ type EasyPourServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewEasyPourServiceHandler(svc EasyPourServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	easyPourServiceMethods := v1.File_easypour_v1_easypour_proto.Services().ByName("EasyPourService").Methods()
+	easyPourServiceInitHandler := connect.NewUnaryHandler(
+		EasyPourServiceInitProcedure,
+		svc.Init,
+		connect.WithSchema(easyPourServiceMethods.ByName("Init")),
+		connect.WithHandlerOptions(opts...),
+	)
 	easyPourServiceGetMenuHandler := connect.NewUnaryHandler(
 		EasyPourServiceGetMenuProcedure,
 		svc.GetMenu,
@@ -218,8 +299,28 @@ func NewEasyPourServiceHandler(svc EasyPourServiceHandler, opts ...connect.Handl
 		connect.WithSchema(easyPourServiceMethods.ByName("DeleteMenuItem")),
 		connect.WithHandlerOptions(opts...),
 	)
+	easyPourServiceGetOrderHandler := connect.NewUnaryHandler(
+		EasyPourServiceGetOrderProcedure,
+		svc.GetOrder,
+		connect.WithSchema(easyPourServiceMethods.ByName("GetOrder")),
+		connect.WithHandlerOptions(opts...),
+	)
+	easyPourServiceListOrdersHandler := connect.NewUnaryHandler(
+		EasyPourServiceListOrdersProcedure,
+		svc.ListOrders,
+		connect.WithSchema(easyPourServiceMethods.ByName("ListOrders")),
+		connect.WithHandlerOptions(opts...),
+	)
+	easyPourServiceUpdateOrderStatusHandler := connect.NewUnaryHandler(
+		EasyPourServiceUpdateOrderStatusProcedure,
+		svc.UpdateOrderStatus,
+		connect.WithSchema(easyPourServiceMethods.ByName("UpdateOrderStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/easypour.v1.EasyPourService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case EasyPourServiceInitProcedure:
+			easyPourServiceInitHandler.ServeHTTP(w, r)
 		case EasyPourServiceGetMenuProcedure:
 			easyPourServiceGetMenuHandler.ServeHTTP(w, r)
 		case EasyPourServiceOrderDrinkProcedure:
@@ -232,6 +333,12 @@ func NewEasyPourServiceHandler(svc EasyPourServiceHandler, opts ...connect.Handl
 			easyPourServiceUpdateMenuItemHandler.ServeHTTP(w, r)
 		case EasyPourServiceDeleteMenuItemProcedure:
 			easyPourServiceDeleteMenuItemHandler.ServeHTTP(w, r)
+		case EasyPourServiceGetOrderProcedure:
+			easyPourServiceGetOrderHandler.ServeHTTP(w, r)
+		case EasyPourServiceListOrdersProcedure:
+			easyPourServiceListOrdersHandler.ServeHTTP(w, r)
+		case EasyPourServiceUpdateOrderStatusProcedure:
+			easyPourServiceUpdateOrderStatusHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -240,6 +347,10 @@ func NewEasyPourServiceHandler(svc EasyPourServiceHandler, opts ...connect.Handl
 
 // UnimplementedEasyPourServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedEasyPourServiceHandler struct{}
+
+func (UnimplementedEasyPourServiceHandler) Init(context.Context, *connect.Request[v1.InitRequest]) (*connect.Response[v1.InitResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.Init is not implemented"))
+}
 
 func (UnimplementedEasyPourServiceHandler) GetMenu(context.Context, *connect.Request[v1.GetMenuRequest]) (*connect.Response[v1.GetMenuResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.GetMenu is not implemented"))
@@ -263,4 +374,16 @@ func (UnimplementedEasyPourServiceHandler) UpdateMenuItem(context.Context, *conn
 
 func (UnimplementedEasyPourServiceHandler) DeleteMenuItem(context.Context, *connect.Request[v1.DeleteMenuItemRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.DeleteMenuItem is not implemented"))
+}
+
+func (UnimplementedEasyPourServiceHandler) GetOrder(context.Context, *connect.Request[v1.GetOrderRequest]) (*connect.Response[v1.GetOrderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.GetOrder is not implemented"))
+}
+
+func (UnimplementedEasyPourServiceHandler) ListOrders(context.Context, *connect.Request[v1.ListOrdersRequest]) (*connect.Response[v1.ListOrdersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.ListOrders is not implemented"))
+}
+
+func (UnimplementedEasyPourServiceHandler) UpdateOrderStatus(context.Context, *connect.Request[v1.UpdateOrderStatusRequest]) (*connect.Response[v1.UpdateOrderStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.UpdateOrderStatus is not implemented"))
 }

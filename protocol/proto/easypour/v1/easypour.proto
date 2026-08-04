@@ -15,7 +15,7 @@ message OrderRequest {
   int32 milk_amount = 5;  // Optional: amount of milk (percentage or ml)
 }
 
-// OrderResponse represents the response after placing an order
+// OrderResponse represents the response after placing an order (used for OrderDrink creation).
 message OrderResponse {
   string order_id = 1;
   string menu_item_id = 2;  // id of the menu item that was ordered
@@ -23,8 +23,51 @@ message OrderResponse {
   bool add_milk = 4;
   int32 sugar_amount = 5;
   int32 milk_amount = 6;
-  string status = 7; // e.g., "preparing", "ready", "completed"
+  string status = 7; // e.g., "pending", "preparing", "delivered"
   int64 created_at = 8; // Unix timestamp
+}
+
+// Order is a persisted order (includes username for ownership). Used by GetOrder, ListOrders, UpdateOrderStatus.
+message Order {
+  string order_id = 1;
+  string menu_item_id = 2;
+  string username = 3;  // order owner; empty when auth disabled
+  bool add_sugar = 4;
+  bool add_milk = 5;
+  int32 sugar_amount = 6;
+  int32 milk_amount = 7;
+  string status = 8;   // "pending", "preparing", "delivered"
+  int64 created_at = 9;
+  int64 updated_at = 10;
+}
+
+// GetOrderRequest requests a single order by id. Requires auth; returns own order or admin sees any.
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+// GetOrderResponse returns the order when found and caller has permission.
+message GetOrderResponse {
+  Order order = 1;
+}
+
+// ListOrdersRequest lists orders. Requires auth; regular users see own, admins see all.
+message ListOrdersRequest {}
+
+// ListOrdersResponse returns the list of orders (filtered by backend).
+message ListOrdersResponse {
+  repeated Order orders = 1;
+}
+
+// UpdateOrderStatusRequest updates an order's status. Requires auth; permissions enforced by backend.
+message UpdateOrderStatusRequest {
+  string order_id = 1;
+  string status = 2;   // "pending", "preparing", "delivered"
+}
+
+// UpdateOrderStatusResponse returns the updated order.
+message UpdateOrderStatusResponse {
+  Order order = 1;
 }
 
 // MenuItem represents an item in the menu (beverage, food, etc.)
@@ -61,6 +104,15 @@ message DeleteMenuItemRequest {
   string id = 1;
 }
 
+// InitRequest is a request for app bootstrap data (version, OAuth providers).
+message InitRequest {}
+
+// InitResponse returns app version and configured OAuth2 providers for the login form.
+message InitResponse {
+  string version = 1;
+  repeated OAuthProvider oauth_providers = 2;
+}
+
 // GetCurrentUserRequest is a request for the current user (when auth is enabled)
 message GetCurrentUserRequest {}
 
@@ -82,6 +134,9 @@ message GetCurrentUserResponse {
 
 // EasyPourService provides methods for the menu and orders
 service EasyPourService {
+  // Init returns app version and configured OAuth2 providers. Callable unauthenticated on load.
+  rpc Init(InitRequest) returns (InitResponse) {}
+
   // GetMenu returns the menu (beverages, food, etc.)
   rpc GetMenu(GetMenuRequest) returns (GetMenuResponse) {}
 
@@ -99,4 +154,13 @@ service EasyPourService {
 
   // DeleteMenuItem removes a menu item by id (admin only).
   rpc DeleteMenuItem(DeleteMenuItemRequest) returns (google.protobuf.Empty) {}
+
+  // GetOrder returns a single order by id. Requires auth; caller must own order or be admin.
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse) {}
+
+  // ListOrders returns orders for the caller (own orders) or all orders if admin. Requires auth.
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse) {}
+
+  // UpdateOrderStatus updates an order's status. Requires auth; admin can set preparing/delivered, user can set delivered for own orders.
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse) {}
 }

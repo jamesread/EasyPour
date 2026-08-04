@@ -1,0 +1,8 @@
+# Backend config for integration tests (no auth, no webhooks)
+configVersion: 1
+
+auth: {}
+
+webhooks: []
+
+oauthProviders: []

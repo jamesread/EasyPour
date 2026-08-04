@@ -99,7 +99,7 @@ func (x *OrderRequest) GetMilkAmount() int32 {
 	return 0
 }
 
-// OrderResponse represents the response after placing an order
+// OrderResponse represents the response after placing an order (used for OrderDrink creation).
 type OrderResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	OrderId       string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
@@ -108,7 +108,7 @@ type OrderResponse struct {
 	AddMilk       bool                   `protobuf:"varint,4,opt,name=add_milk,json=addMilk,proto3" json:"add_milk,omitempty"`
 	SugarAmount   int32                  `protobuf:"varint,5,opt,name=sugar_amount,json=sugarAmount,proto3" json:"sugar_amount,omitempty"`
 	MilkAmount    int32                  `protobuf:"varint,6,opt,name=milk_amount,json=milkAmount,proto3" json:"milk_amount,omitempty"`
-	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`                         // e.g., "preparing", "ready", "completed"
+	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`                         // e.g., "pending", "preparing", "delivered"
 	CreatedAt     int64                  `protobuf:"varint,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // Unix timestamp
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -200,6 +200,393 @@ func (x *OrderResponse) GetCreatedAt() int64 {
 	return 0
 }
 
+// Order is a persisted order (includes username for ownership). Used by GetOrder, ListOrders, UpdateOrderStatus.
+type Order struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderId       string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	MenuItemId    string                 `protobuf:"bytes,2,opt,name=menu_item_id,json=menuItemId,proto3" json:"menu_item_id,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"` // order owner; empty when auth disabled
+	AddSugar      bool                   `protobuf:"varint,4,opt,name=add_sugar,json=addSugar,proto3" json:"add_sugar,omitempty"`
+	AddMilk       bool                   `protobuf:"varint,5,opt,name=add_milk,json=addMilk,proto3" json:"add_milk,omitempty"`
+	SugarAmount   int32                  `protobuf:"varint,6,opt,name=sugar_amount,json=sugarAmount,proto3" json:"sugar_amount,omitempty"`
+	MilkAmount    int32                  `protobuf:"varint,7,opt,name=milk_amount,json=milkAmount,proto3" json:"milk_amount,omitempty"`
+	Status        string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"` // "pending", "preparing", "delivered"
+	CreatedAt     int64                  `protobuf:"varint,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     int64                  `protobuf:"varint,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Order) Reset() {
+	*x = Order{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Order) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Order) ProtoMessage() {}
+
+func (x *Order) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Order.ProtoReflect.Descriptor instead.
+func (*Order) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Order) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+func (x *Order) GetMenuItemId() string {
+	if x != nil {
+		return x.MenuItemId
+	}
+	return ""
+}
+
+func (x *Order) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *Order) GetAddSugar() bool {
+	if x != nil {
+		return x.AddSugar
+	}
+	return false
+}
+
+func (x *Order) GetAddMilk() bool {
+	if x != nil {
+		return x.AddMilk
+	}
+	return false
+}
+
+func (x *Order) GetSugarAmount() int32 {
+	if x != nil {
+		return x.SugarAmount
+	}
+	return 0
+}
+
+func (x *Order) GetMilkAmount() int32 {
+	if x != nil {
+		return x.MilkAmount
+	}
+	return 0
+}
+
+func (x *Order) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Order) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *Order) GetUpdatedAt() int64 {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return 0
+}
+
+// GetOrderRequest requests a single order by id. Requires auth; returns own order or admin sees any.
+type GetOrderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderId       string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOrderRequest) Reset() {
+	*x = GetOrderRequest{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrderRequest) ProtoMessage() {}
+
+func (x *GetOrderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrderRequest.ProtoReflect.Descriptor instead.
+func (*GetOrderRequest) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetOrderRequest) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+// GetOrderResponse returns the order when found and caller has permission.
+type GetOrderResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Order         *Order                 `protobuf:"bytes,1,opt,name=order,proto3" json:"order,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOrderResponse) Reset() {
+	*x = GetOrderResponse{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrderResponse) ProtoMessage() {}
+
+func (x *GetOrderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrderResponse.ProtoReflect.Descriptor instead.
+func (*GetOrderResponse) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetOrderResponse) GetOrder() *Order {
+	if x != nil {
+		return x.Order
+	}
+	return nil
+}
+
+// ListOrdersRequest lists orders. Requires auth; regular users see own, admins see all.
+type ListOrdersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOrdersRequest) Reset() {
+	*x = ListOrdersRequest{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOrdersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOrdersRequest) ProtoMessage() {}
+
+func (x *ListOrdersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOrdersRequest.ProtoReflect.Descriptor instead.
+func (*ListOrdersRequest) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{5}
+}
+
+// ListOrdersResponse returns the list of orders (filtered by backend).
+type ListOrdersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Orders        []*Order               `protobuf:"bytes,1,rep,name=orders,proto3" json:"orders,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOrdersResponse) Reset() {
+	*x = ListOrdersResponse{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOrdersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOrdersResponse) ProtoMessage() {}
+
+func (x *ListOrdersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOrdersResponse.ProtoReflect.Descriptor instead.
+func (*ListOrdersResponse) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListOrdersResponse) GetOrders() []*Order {
+	if x != nil {
+		return x.Orders
+	}
+	return nil
+}
+
+// UpdateOrderStatusRequest updates an order's status. Requires auth; permissions enforced by backend.
+type UpdateOrderStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderId       string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"` // "pending", "preparing", "delivered"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateOrderStatusRequest) Reset() {
+	*x = UpdateOrderStatusRequest{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateOrderStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateOrderStatusRequest) ProtoMessage() {}
+
+func (x *UpdateOrderStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateOrderStatusRequest.ProtoReflect.Descriptor instead.
+func (*UpdateOrderStatusRequest) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UpdateOrderStatusRequest) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+func (x *UpdateOrderStatusRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// UpdateOrderStatusResponse returns the updated order.
+type UpdateOrderStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Order         *Order                 `protobuf:"bytes,1,opt,name=order,proto3" json:"order,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateOrderStatusResponse) Reset() {
+	*x = UpdateOrderStatusResponse{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateOrderStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateOrderStatusResponse) ProtoMessage() {}
+
+func (x *UpdateOrderStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateOrderStatusResponse.ProtoReflect.Descriptor instead.
+func (*UpdateOrderStatusResponse) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *UpdateOrderStatusResponse) GetOrder() *Order {
+	if x != nil {
+		return x.Order
+	}
+	return nil
+}
+
 // MenuItem represents an item in the menu (beverage, food, etc.)
 type MenuItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -216,7 +603,7 @@ type MenuItem struct {
 
 func (x *MenuItem) Reset() {
 	*x = MenuItem{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[2]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -228,7 +615,7 @@ func (x *MenuItem) String() string {
 func (*MenuItem) ProtoMessage() {}
 
 func (x *MenuItem) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[2]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -241,7 +628,7 @@ func (x *MenuItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MenuItem.ProtoReflect.Descriptor instead.
 func (*MenuItem) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{2}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *MenuItem) GetId() string {
@@ -302,7 +689,7 @@ type GetMenuRequest struct {
 
 func (x *GetMenuRequest) Reset() {
 	*x = GetMenuRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[3]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -314,7 +701,7 @@ func (x *GetMenuRequest) String() string {
 func (*GetMenuRequest) ProtoMessage() {}
 
 func (x *GetMenuRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[3]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -327,7 +714,7 @@ func (x *GetMenuRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMenuRequest.ProtoReflect.Descriptor instead.
 func (*GetMenuRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{3}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{10}
 }
 
 // GetMenuResponse contains the menu items
@@ -340,7 +727,7 @@ type GetMenuResponse struct {
 
 func (x *GetMenuResponse) Reset() {
 	*x = GetMenuResponse{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[4]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -352,7 +739,7 @@ func (x *GetMenuResponse) String() string {
 func (*GetMenuResponse) ProtoMessage() {}
 
 func (x *GetMenuResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[4]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -365,7 +752,7 @@ func (x *GetMenuResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMenuResponse.ProtoReflect.Descriptor instead.
 func (*GetMenuResponse) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{4}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetMenuResponse) GetItems() []*MenuItem {
@@ -385,7 +772,7 @@ type CreateMenuItemRequest struct {
 
 func (x *CreateMenuItemRequest) Reset() {
 	*x = CreateMenuItemRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[5]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -397,7 +784,7 @@ func (x *CreateMenuItemRequest) String() string {
 func (*CreateMenuItemRequest) ProtoMessage() {}
 
 func (x *CreateMenuItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[5]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -410,7 +797,7 @@ func (x *CreateMenuItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMenuItemRequest.ProtoReflect.Descriptor instead.
 func (*CreateMenuItemRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{5}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateMenuItemRequest) GetItem() *MenuItem {
@@ -430,7 +817,7 @@ type UpdateMenuItemRequest struct {
 
 func (x *UpdateMenuItemRequest) Reset() {
 	*x = UpdateMenuItemRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[6]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -442,7 +829,7 @@ func (x *UpdateMenuItemRequest) String() string {
 func (*UpdateMenuItemRequest) ProtoMessage() {}
 
 func (x *UpdateMenuItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[6]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -455,7 +842,7 @@ func (x *UpdateMenuItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMenuItemRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMenuItemRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{6}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateMenuItemRequest) GetItem() *MenuItem {
@@ -475,7 +862,7 @@ type DeleteMenuItemRequest struct {
 
 func (x *DeleteMenuItemRequest) Reset() {
 	*x = DeleteMenuItemRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[7]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -487,7 +874,7 @@ func (x *DeleteMenuItemRequest) String() string {
 func (*DeleteMenuItemRequest) ProtoMessage() {}
 
 func (x *DeleteMenuItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[7]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -500,7 +887,7 @@ func (x *DeleteMenuItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMenuItemRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMenuItemRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{7}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteMenuItemRequest) GetId() string {
@@ -508,6 +895,96 @@ func (x *DeleteMenuItemRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+// InitRequest is a request for app bootstrap data (version, OAuth providers).
+type InitRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InitRequest) Reset() {
+	*x = InitRequest{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitRequest) ProtoMessage() {}
+
+func (x *InitRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitRequest.ProtoReflect.Descriptor instead.
+func (*InitRequest) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{15}
+}
+
+// InitResponse returns app version and configured OAuth2 providers for the login form.
+type InitResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Version        string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	OauthProviders []*OAuthProvider       `protobuf:"bytes,2,rep,name=oauth_providers,json=oauthProviders,proto3" json:"oauth_providers,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *InitResponse) Reset() {
+	*x = InitResponse{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitResponse) ProtoMessage() {}
+
+func (x *InitResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitResponse.ProtoReflect.Descriptor instead.
+func (*InitResponse) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *InitResponse) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *InitResponse) GetOauthProviders() []*OAuthProvider {
+	if x != nil {
+		return x.OauthProviders
+	}
+	return nil
 }
 
 // GetCurrentUserRequest is a request for the current user (when auth is enabled)
@@ -519,7 +996,7 @@ type GetCurrentUserRequest struct {
 
 func (x *GetCurrentUserRequest) Reset() {
 	*x = GetCurrentUserRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[8]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -531,7 +1008,7 @@ func (x *GetCurrentUserRequest) String() string {
 func (*GetCurrentUserRequest) ProtoMessage() {}
 
 func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[8]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -544,7 +1021,7 @@ func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentUserRequest.ProtoReflect.Descriptor instead.
 func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{8}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{17}
 }
 
 // OAuthProvider describes a configured OAuth2 login provider for the login form
@@ -559,7 +1036,7 @@ type OAuthProvider struct {
 
 func (x *OAuthProvider) Reset() {
 	*x = OAuthProvider{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[9]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -571,7 +1048,7 @@ func (x *OAuthProvider) String() string {
 func (*OAuthProvider) ProtoMessage() {}
 
 func (x *OAuthProvider) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[9]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -584,7 +1061,7 @@ func (x *OAuthProvider) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OAuthProvider.ProtoReflect.Descriptor instead.
 func (*OAuthProvider) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{9}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *OAuthProvider) GetId() string {
@@ -622,7 +1099,7 @@ type GetCurrentUserResponse struct {
 
 func (x *GetCurrentUserResponse) Reset() {
 	*x = GetCurrentUserResponse{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[10]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -634,7 +1111,7 @@ func (x *GetCurrentUserResponse) String() string {
 func (*GetCurrentUserResponse) ProtoMessage() {}
 
 func (x *GetCurrentUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[10]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,7 +1124,7 @@ func (x *GetCurrentUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentUserResponse.ProtoReflect.Descriptor instead.
 func (*GetCurrentUserResponse) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{10}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetCurrentUserResponse) GetIsAuthenticated() bool {
@@ -702,7 +1179,35 @@ const file_easypour_v1_easypour_proto_rawDesc = "" +
 	"milkAmount\x12\x16\n" +
 	"\x06status\x18\a \x01(\tR\x06status\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\b \x01(\x03R\tcreatedAt\"\xd5\x01\n" +
+	"created_at\x18\b \x01(\x03R\tcreatedAt\"\xb2\x02\n" +
+	"\x05Order\x12\x19\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId\x12 \n" +
+	"\fmenu_item_id\x18\x02 \x01(\tR\n" +
+	"menuItemId\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x1b\n" +
+	"\tadd_sugar\x18\x04 \x01(\bR\baddSugar\x12\x19\n" +
+	"\badd_milk\x18\x05 \x01(\bR\aaddMilk\x12!\n" +
+	"\fsugar_amount\x18\x06 \x01(\x05R\vsugarAmount\x12\x1f\n" +
+	"\vmilk_amount\x18\a \x01(\x05R\n" +
+	"milkAmount\x12\x16\n" +
+	"\x06status\x18\b \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\t \x01(\x03R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\n" +
+	" \x01(\x03R\tupdatedAt\",\n" +
+	"\x0fGetOrderRequest\x12\x19\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId\"<\n" +
+	"\x10GetOrderResponse\x12(\n" +
+	"\x05order\x18\x01 \x01(\v2\x12.easypour.v1.OrderR\x05order\"\x13\n" +
+	"\x11ListOrdersRequest\"@\n" +
+	"\x12ListOrdersResponse\x12*\n" +
+	"\x06orders\x18\x01 \x03(\v2\x12.easypour.v1.OrderR\x06orders\"M\n" +
+	"\x18UpdateOrderStatusRequest\x12\x19\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"E\n" +
+	"\x19UpdateOrderStatusResponse\x12(\n" +
+	"\x05order\x18\x01 \x01(\v2\x12.easypour.v1.OrderR\x05order\"\xd5\x01\n" +
 	"\bMenuItem\x12\x0e\n" +
 	"\x02id\x18\x06 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -719,7 +1224,11 @@ const file_easypour_v1_easypour_proto_rawDesc = "" +
 	"\x15UpdateMenuItemRequest\x12)\n" +
 	"\x04item\x18\x01 \x01(\v2\x15.easypour.v1.MenuItemR\x04item\"'\n" +
 	"\x15DeleteMenuItemRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\r\n" +
+	"\vInitRequest\"m\n" +
+	"\fInitResponse\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12C\n" +
+	"\x0foauth_providers\x18\x02 \x03(\v2\x1a.easypour.v1.OAuthProviderR\x0eoauthProviders\"\x17\n" +
 	"\x15GetCurrentUserRequest\"N\n" +
 	"\rOAuthProvider\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -729,15 +1238,20 @@ const file_easypour_v1_easypour_proto_rawDesc = "" +
 	"\x10is_authenticated\x18\x01 \x01(\bR\x0fisAuthenticated\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x19\n" +
 	"\bis_admin\x18\x03 \x01(\bR\aisAdmin\x12C\n" +
-	"\x0foauth_providers\x18\x04 \x03(\v2\x1a.easypour.v1.OAuthProviderR\x0eoauthProviders2\xeb\x03\n" +
-	"\x0fEasyPourService\x12F\n" +
+	"\x0foauth_providers\x18\x04 \x03(\v2\x1a.easypour.v1.OAuthProviderR\x0eoauthProviders2\xac\x06\n" +
+	"\x0fEasyPourService\x12=\n" +
+	"\x04Init\x12\x18.easypour.v1.InitRequest\x1a\x19.easypour.v1.InitResponse\"\x00\x12F\n" +
 	"\aGetMenu\x12\x1b.easypour.v1.GetMenuRequest\x1a\x1c.easypour.v1.GetMenuResponse\"\x00\x12E\n" +
 	"\n" +
 	"OrderDrink\x12\x19.easypour.v1.OrderRequest\x1a\x1a.easypour.v1.OrderResponse\"\x00\x12[\n" +
 	"\x0eGetCurrentUser\x12\".easypour.v1.GetCurrentUserRequest\x1a#.easypour.v1.GetCurrentUserResponse\"\x00\x12M\n" +
 	"\x0eCreateMenuItem\x12\".easypour.v1.CreateMenuItemRequest\x1a\x15.easypour.v1.MenuItem\"\x00\x12M\n" +
 	"\x0eUpdateMenuItem\x12\".easypour.v1.UpdateMenuItemRequest\x1a\x15.easypour.v1.MenuItem\"\x00\x12N\n" +
-	"\x0eDeleteMenuItem\x12\".easypour.v1.DeleteMenuItemRequest\x1a\x16.google.protobuf.Empty\"\x00B-Z+easypour/service/gen/easypour/v1;easypourv1b\x06proto3"
+	"\x0eDeleteMenuItem\x12\".easypour.v1.DeleteMenuItemRequest\x1a\x16.google.protobuf.Empty\"\x00\x12I\n" +
+	"\bGetOrder\x12\x1c.easypour.v1.GetOrderRequest\x1a\x1d.easypour.v1.GetOrderResponse\"\x00\x12O\n" +
+	"\n" +
+	"ListOrders\x12\x1e.easypour.v1.ListOrdersRequest\x1a\x1f.easypour.v1.ListOrdersResponse\"\x00\x12d\n" +
+	"\x11UpdateOrderStatus\x12%.easypour.v1.UpdateOrderStatusRequest\x1a&.easypour.v1.UpdateOrderStatusResponse\"\x00B-Z+easypour/service/gen/easypour/v1;easypourv1b\x06proto3"
 
 var (
 	file_easypour_v1_easypour_proto_rawDescOnce sync.Once
@@ -751,43 +1265,64 @@ func file_easypour_v1_easypour_proto_rawDescGZIP() []byte {
 	return file_easypour_v1_easypour_proto_rawDescData
 }
 
-var file_easypour_v1_easypour_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_easypour_v1_easypour_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_easypour_v1_easypour_proto_goTypes = []any{
-	(*OrderRequest)(nil),           // 0: easypour.v1.OrderRequest
-	(*OrderResponse)(nil),          // 1: easypour.v1.OrderResponse
-	(*MenuItem)(nil),               // 2: easypour.v1.MenuItem
-	(*GetMenuRequest)(nil),         // 3: easypour.v1.GetMenuRequest
-	(*GetMenuResponse)(nil),        // 4: easypour.v1.GetMenuResponse
-	(*CreateMenuItemRequest)(nil),  // 5: easypour.v1.CreateMenuItemRequest
-	(*UpdateMenuItemRequest)(nil),  // 6: easypour.v1.UpdateMenuItemRequest
-	(*DeleteMenuItemRequest)(nil),  // 7: easypour.v1.DeleteMenuItemRequest
-	(*GetCurrentUserRequest)(nil),  // 8: easypour.v1.GetCurrentUserRequest
-	(*OAuthProvider)(nil),          // 9: easypour.v1.OAuthProvider
-	(*GetCurrentUserResponse)(nil), // 10: easypour.v1.GetCurrentUserResponse
-	(*emptypb.Empty)(nil),          // 11: google.protobuf.Empty
+	(*OrderRequest)(nil),              // 0: easypour.v1.OrderRequest
+	(*OrderResponse)(nil),             // 1: easypour.v1.OrderResponse
+	(*Order)(nil),                     // 2: easypour.v1.Order
+	(*GetOrderRequest)(nil),           // 3: easypour.v1.GetOrderRequest
+	(*GetOrderResponse)(nil),          // 4: easypour.v1.GetOrderResponse
+	(*ListOrdersRequest)(nil),         // 5: easypour.v1.ListOrdersRequest
+	(*ListOrdersResponse)(nil),        // 6: easypour.v1.ListOrdersResponse
+	(*UpdateOrderStatusRequest)(nil),  // 7: easypour.v1.UpdateOrderStatusRequest
+	(*UpdateOrderStatusResponse)(nil), // 8: easypour.v1.UpdateOrderStatusResponse
+	(*MenuItem)(nil),                  // 9: easypour.v1.MenuItem
+	(*GetMenuRequest)(nil),            // 10: easypour.v1.GetMenuRequest
+	(*GetMenuResponse)(nil),           // 11: easypour.v1.GetMenuResponse
+	(*CreateMenuItemRequest)(nil),     // 12: easypour.v1.CreateMenuItemRequest
+	(*UpdateMenuItemRequest)(nil),     // 13: easypour.v1.UpdateMenuItemRequest
+	(*DeleteMenuItemRequest)(nil),     // 14: easypour.v1.DeleteMenuItemRequest
+	(*InitRequest)(nil),               // 15: easypour.v1.InitRequest
+	(*InitResponse)(nil),              // 16: easypour.v1.InitResponse
+	(*GetCurrentUserRequest)(nil),     // 17: easypour.v1.GetCurrentUserRequest
+	(*OAuthProvider)(nil),             // 18: easypour.v1.OAuthProvider
+	(*GetCurrentUserResponse)(nil),    // 19: easypour.v1.GetCurrentUserResponse
+	(*emptypb.Empty)(nil),             // 20: google.protobuf.Empty
 }
 var file_easypour_v1_easypour_proto_depIdxs = []int32{
-	2,  // 0: easypour.v1.GetMenuResponse.items:type_name -> easypour.v1.MenuItem
-	2,  // 1: easypour.v1.CreateMenuItemRequest.item:type_name -> easypour.v1.MenuItem
-	2,  // 2: easypour.v1.UpdateMenuItemRequest.item:type_name -> easypour.v1.MenuItem
-	9,  // 3: easypour.v1.GetCurrentUserResponse.oauth_providers:type_name -> easypour.v1.OAuthProvider
-	3,  // 4: easypour.v1.EasyPourService.GetMenu:input_type -> easypour.v1.GetMenuRequest
-	0,  // 5: easypour.v1.EasyPourService.OrderDrink:input_type -> easypour.v1.OrderRequest
-	8,  // 6: easypour.v1.EasyPourService.GetCurrentUser:input_type -> easypour.v1.GetCurrentUserRequest
-	5,  // 7: easypour.v1.EasyPourService.CreateMenuItem:input_type -> easypour.v1.CreateMenuItemRequest
-	6,  // 8: easypour.v1.EasyPourService.UpdateMenuItem:input_type -> easypour.v1.UpdateMenuItemRequest
-	7,  // 9: easypour.v1.EasyPourService.DeleteMenuItem:input_type -> easypour.v1.DeleteMenuItemRequest
-	4,  // 10: easypour.v1.EasyPourService.GetMenu:output_type -> easypour.v1.GetMenuResponse
-	1,  // 11: easypour.v1.EasyPourService.OrderDrink:output_type -> easypour.v1.OrderResponse
-	10, // 12: easypour.v1.EasyPourService.GetCurrentUser:output_type -> easypour.v1.GetCurrentUserResponse
-	2,  // 13: easypour.v1.EasyPourService.CreateMenuItem:output_type -> easypour.v1.MenuItem
-	2,  // 14: easypour.v1.EasyPourService.UpdateMenuItem:output_type -> easypour.v1.MenuItem
-	11, // 15: easypour.v1.EasyPourService.DeleteMenuItem:output_type -> google.protobuf.Empty
-	10, // [10:16] is the sub-list for method output_type
-	4,  // [4:10] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	2,  // 0: easypour.v1.GetOrderResponse.order:type_name -> easypour.v1.Order
+	2,  // 1: easypour.v1.ListOrdersResponse.orders:type_name -> easypour.v1.Order
+	2,  // 2: easypour.v1.UpdateOrderStatusResponse.order:type_name -> easypour.v1.Order
+	9,  // 3: easypour.v1.GetMenuResponse.items:type_name -> easypour.v1.MenuItem
+	9,  // 4: easypour.v1.CreateMenuItemRequest.item:type_name -> easypour.v1.MenuItem
+	9,  // 5: easypour.v1.UpdateMenuItemRequest.item:type_name -> easypour.v1.MenuItem
+	18, // 6: easypour.v1.InitResponse.oauth_providers:type_name -> easypour.v1.OAuthProvider
+	18, // 7: easypour.v1.GetCurrentUserResponse.oauth_providers:type_name -> easypour.v1.OAuthProvider
+	15, // 8: easypour.v1.EasyPourService.Init:input_type -> easypour.v1.InitRequest
+	10, // 9: easypour.v1.EasyPourService.GetMenu:input_type -> easypour.v1.GetMenuRequest
+	0,  // 10: easypour.v1.EasyPourService.OrderDrink:input_type -> easypour.v1.OrderRequest
+	17, // 11: easypour.v1.EasyPourService.GetCurrentUser:input_type -> easypour.v1.GetCurrentUserRequest
+	12, // 12: easypour.v1.EasyPourService.CreateMenuItem:input_type -> easypour.v1.CreateMenuItemRequest
+	13, // 13: easypour.v1.EasyPourService.UpdateMenuItem:input_type -> easypour.v1.UpdateMenuItemRequest
+	14, // 14: easypour.v1.EasyPourService.DeleteMenuItem:input_type -> easypour.v1.DeleteMenuItemRequest
+	3,  // 15: easypour.v1.EasyPourService.GetOrder:input_type -> easypour.v1.GetOrderRequest
+	5,  // 16: easypour.v1.EasyPourService.ListOrders:input_type -> easypour.v1.ListOrdersRequest
+	7,  // 17: easypour.v1.EasyPourService.UpdateOrderStatus:input_type -> easypour.v1.UpdateOrderStatusRequest
+	16, // 18: easypour.v1.EasyPourService.Init:output_type -> easypour.v1.InitResponse
+	11, // 19: easypour.v1.EasyPourService.GetMenu:output_type -> easypour.v1.GetMenuResponse
+	1,  // 20: easypour.v1.EasyPourService.OrderDrink:output_type -> easypour.v1.OrderResponse
+	19, // 21: easypour.v1.EasyPourService.GetCurrentUser:output_type -> easypour.v1.GetCurrentUserResponse
+	9,  // 22: easypour.v1.EasyPourService.CreateMenuItem:output_type -> easypour.v1.MenuItem
+	9,  // 23: easypour.v1.EasyPourService.UpdateMenuItem:output_type -> easypour.v1.MenuItem
+	20, // 24: easypour.v1.EasyPourService.DeleteMenuItem:output_type -> google.protobuf.Empty
+	4,  // 25: easypour.v1.EasyPourService.GetOrder:output_type -> easypour.v1.GetOrderResponse
+	6,  // 26: easypour.v1.EasyPourService.ListOrders:output_type -> easypour.v1.ListOrdersResponse
+	8,  // 27: easypour.v1.EasyPourService.UpdateOrderStatus:output_type -> easypour.v1.UpdateOrderStatusResponse
+	18, // [18:28] is the sub-list for method output_type
+	8,  // [8:18] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_easypour_v1_easypour_proto_init() }
@@ -801,7 +1336,7 @@ func file_easypour_v1_easypour_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_easypour_v1_easypour_proto_rawDesc), len(file_easypour_v1_easypour_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

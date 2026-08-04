@@ -36,6 +36,10 @@ const routes = [
     name: 'UserProfile',
     component: UserProfile,
   },
+  {
+    path: '/admin/orders',
+    redirect: '/orders',
+  },
 ]
 
 const router = createRouter({

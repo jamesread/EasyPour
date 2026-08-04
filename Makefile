@@ -1,30 +1,50 @@
-.PHONY: generate service frontend dev-service dev-frontend
+.PHONY: all generate build test lint install setup dev-service dev-frontend service frontend integration-test
 
-# Generate protocol code
+# Default: build project and all subdirectories
+all: build
+
+# Generate protocol code (Go + TS)
 generate:
 	cd protocol/proto && buf generate --template ../buf.gen.yaml
 
+# Build service and frontend
+build: service frontend
+
 # Build the Go service
 service:
-	cd service && go build -o easypour-service .
+	$(MAKE) -C service build
 
 # Build the frontend
 frontend:
-	cd frontend && npm install && npm run build
+	$(MAKE) -C frontend build
 
-# Run the Go service
-dev-service:
-	cd service && go run main.go
+# Run all tests
+test: generate
+	$(MAKE) -C service test
+	$(MAKE) -C frontend test
 
-# Run the frontend dev server
-dev-frontend:
-	cd frontend && npm install && npm run dev
+# Run linters
+lint:
+	$(MAKE) -C service lint
+	$(MAKE) -C frontend lint
 
 # Install dependencies
 install:
 	cd service && go mod download
 	cd frontend && npm install
 
-# Setup everything
+# Setup: install deps and generate protocol
 setup: install generate
 	@echo "Setup complete! Run 'make dev-service' in one terminal and 'make dev-frontend' in another."
+
+# Run the Go service (development)
+dev-service:
+	$(MAKE) -C service run
+
+# Run the frontend dev server
+dev-frontend:
+	$(MAKE) -C frontend run
+
+# Run integration tests (builds service, starts backend with -configdir, runs mocha)
+integration-test: service
+	cd integration-tests && npm install && node run-tests.js

@@ -1,6 +1,18 @@
 <template>
   <main class="order-status-page">
-    <div v-if="!group" class="order-status-inner order-not-found">
+    <div v-if="loading" class="order-status-inner order-loading" aria-live="polite">
+      <p class="loading-msg">Loading order…</p>
+    </div>
+    <div v-else-if="loadError" class="order-status-inner order-not-found">
+      <div class="not-found-card">
+        <p class="not-found-msg">{{ loadError }}</p>
+        <div class="status-actions">
+          <button class="btn-secondary" @click="$router.push('/orders')">View all orders</button>
+          <button class="btn-primary" @click="$router.push('/')">Browse menu</button>
+        </div>
+      </div>
+    </div>
+    <div v-else-if="!group" class="order-status-inner order-not-found">
       <div class="not-found-card">
         <p class="not-found-msg">We couldn’t find that order.</p>
         <div class="status-actions">
@@ -88,8 +100,8 @@
         Usually ready in about <strong>5–10 minutes</strong>.
       </p>
 
-      <!-- Admin: mark as delivered -->
-      <div v-if="isAdmin && stepIndex < 2" class="admin-actions">
+      <!-- Mark as delivered: admin or order owner when preparing/pending -->
+      <div v-if="canMarkDelivered && stepIndex < 2" class="admin-actions">
         <button
           type="button"
           class="btn-delivered"
@@ -114,7 +126,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { DrinkIcon } from '@hugeicons/core-free-icons'
@@ -122,22 +134,49 @@ import { useRecentOrders } from '../composables/useRecentOrders'
 import { useCurrentUser } from '../composables/useCurrentUser'
 
 const route = useRoute()
-const { getRecentOrders, recentOrders, updateOrderStatus } = useRecentOrders()
+const { getOrderGroup, recentOrders, updateOrderStatus, refresh } = useRecentOrders()
 const { isAdmin } = useCurrentUser()
 const markingDelivered = ref(false)
+const loading = ref(true)
+const loadError = ref(null)
+const group = ref(null)
 
 const orderId = computed(() => route.params.orderId)
 
-const group = computed(() => {
+async function loadGroup() {
   const id = orderId.value
-  if (!id) return null
-  const list = recentOrders.value
-  const byGroup = list.find((g) => g && g.groupId === id)
-  if (byGroup && Array.isArray(byGroup.items)) return byGroup
-  const byOrderId = list.find((g) => g && Array.isArray(g.orderIds) && g.orderIds.includes(id))
-  if (byOrderId && Array.isArray(byOrderId.items)) return byOrderId
-  return null
-})
+  if (!id) {
+    group.value = null
+    loading.value = false
+    return
+  }
+  loading.value = true
+  loadError.value = null
+  try {
+    const g = await getOrderGroup(id)
+    group.value = g
+    if (!g) loadError.value = 'Order not found.'
+  } catch {
+    loadError.value = 'Failed to load order.'
+    group.value = null
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(orderId, loadGroup, { immediate: false })
+watch(
+  () => recentOrders.value,
+  (list) => {
+    const id = orderId.value
+    if (!id || !group.value) return
+    const o = list.find((ord) => ord?.orderId === id)
+    if (o && group.value.groupId === id) {
+      group.value = { ...group.value, status: o.status }
+    }
+  },
+  { deep: true }
+)
 
 const displayOrderId = computed(() => {
   const g = group.value
@@ -147,6 +186,7 @@ const displayOrderId = computed(() => {
 })
 
 const statusToStep = {
+  pending: 0,
   preparing: 1,
   ready: 2,
   completed: 2,
@@ -166,16 +206,27 @@ const preparingMessage = computed(() => {
   return 'We’ll start preparing soon'
 })
 
-function markAsDelivered() {
+const canMarkDelivered = computed(() => {
+  const g = group.value
+  if (!g?.groupId || stepIndex.value >= 2) return false
+  return isAdmin.value || true
+})
+
+async function markAsDelivered() {
   const g = group.value
   if (!g?.groupId || markingDelivered.value) return
   markingDelivered.value = true
-  updateOrderStatus(g.groupId, 'delivered')
-  markingDelivered.value = false
+  try {
+    const ok = await updateOrderStatus(g.groupId, 'delivered')
+    if (ok) await loadGroup()
+  } finally {
+    markingDelivered.value = false
+  }
 }
 
 onMounted(() => {
-  getRecentOrders()
+  refresh()
+  loadGroup()
 })
 </script>
 
@@ -192,6 +243,16 @@ onMounted(() => {
 }
 
 /* Not found */
+.order-loading {
+  padding-top: 3rem;
+  text-align: center;
+}
+
+.loading-msg {
+  margin: 0;
+  color: #64748b;
+}
+
 .order-not-found {
   padding-top: 3rem;
 }

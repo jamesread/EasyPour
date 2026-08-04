@@ -86,10 +86,11 @@ import Header from 'picocrank/vue/components/Header.vue'
 import Login from 'picocrank/vue/components/Login.vue'
 import { useBasket } from './composables/useBasket'
 import { useCurrentUser } from './composables/useCurrentUser'
+import { useInit } from './composables/useInit'
 
-const version = __APP_VERSION__
 const { basketItems } = useBasket()
-const { username, refresh, oauthProviders } = useCurrentUser()
+const { username, refresh } = useCurrentUser()
+const { version, oauthProviders } = useInit()
 const showLoginForm = ref(false)
 const loginDialogRef = ref(null)
 const loginRef = ref(null)

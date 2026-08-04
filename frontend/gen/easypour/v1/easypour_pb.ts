@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file easypour/v1/easypour.proto.
  */
 export const file_easypour_v1_easypour: GenFile = /*@__PURE__*/
-  fileDesc("ChplYXN5cG91ci92MS9lYXN5cG91ci5wcm90bxILZWFzeXBvdXIudjEidAoMT3JkZXJSZXF1ZXN0EhQKDG1lbnVfaXRlbV9pZBgBIAEoCRIRCglhZGRfc3VnYXIYAiABKAgSEAoIYWRkX21pbGsYAyABKAgSFAoMc3VnYXJfYW1vdW50GAQgASgFEhMKC21pbGtfYW1vdW50GAUgASgFIqsBCg1PcmRlclJlc3BvbnNlEhAKCG9yZGVyX2lkGAEgASgJEhQKDG1lbnVfaXRlbV9pZBgCIAEoCRIRCglhZGRfc3VnYXIYAyABKAgSEAoIYWRkX21pbGsYBCABKAgSFAoMc3VnYXJfYW1vdW50GAUgASgFEhMKC21pbGtfYW1vdW50GAYgASgFEg4KBnN0YXR1cxgHIAEoCRISCgpjcmVhdGVkX2F0GAggASgDIo0BCghNZW51SXRlbRIKCgJpZBgGIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhYKDnN1cHBvcnRzX3N1Z2FyGAQgASgIEhUKDXN1cHBvcnRzX21pbGsYBSABKAgSEQoJaW1hZ2VfdXJsGAcgASgJEhAKCGNhdGVnb3J5GAggASgJIhAKDkdldE1lbnVSZXF1ZXN0IjcKD0dldE1lbnVSZXNwb25zZRIkCgVpdGVtcxgBIAMoCzIVLmVhc3lwb3VyLnYxLk1lbnVJdGVtIjwKFUNyZWF0ZU1lbnVJdGVtUmVxdWVzdBIjCgRpdGVtGAEgASgLMhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iPAoVVXBkYXRlTWVudUl0ZW1SZXF1ZXN0EiMKBGl0ZW0YASABKAsyFS5lYXN5cG91ci52MS5NZW51SXRlbSIjChVEZWxldGVNZW51SXRlbVJlcXVlc3QSCgoCaWQYASABKAkiFwoVR2V0Q3VycmVudFVzZXJSZXF1ZXN0IjsKDU9BdXRoUHJvdmlkZXISCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIQCghhdXRoX3VybBgDIAEoCSKLAQoWR2V0Q3VycmVudFVzZXJSZXNwb25zZRIYChBpc19hdXRoZW50aWNhdGVkGAEgASgIEhAKCHVzZXJuYW1lGAIgASgJEhAKCGlzX2FkbWluGAMgASgIEjMKD29hdXRoX3Byb3ZpZGVycxgEIAMoCzIaLmVhc3lwb3VyLnYxLk9BdXRoUHJvdmlkZXIy6wMKD0Vhc3lQb3VyU2VydmljZRJGCgdHZXRNZW51EhsuZWFzeXBvdXIudjEuR2V0TWVudVJlcXVlc3QaHC5lYXN5cG91ci52MS5HZXRNZW51UmVzcG9uc2UiABJFCgpPcmRlckRyaW5rEhkuZWFzeXBvdXIudjEuT3JkZXJSZXF1ZXN0GhouZWFzeXBvdXIudjEuT3JkZXJSZXNwb25zZSIAElsKDkdldEN1cnJlbnRVc2VyEiIuZWFzeXBvdXIudjEuR2V0Q3VycmVudFVzZXJSZXF1ZXN0GiMuZWFzeXBvdXIudjEuR2V0Q3VycmVudFVzZXJSZXNwb25zZSIAEk0KDkNyZWF0ZU1lbnVJdGVtEiIuZWFzeXBvdXIudjEuQ3JlYXRlTWVudUl0ZW1SZXF1ZXN0GhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iABJNCg5VcGRhdGVNZW51SXRlbRIiLmVhc3lwb3VyLnYxLlVwZGF0ZU1lbnVJdGVtUmVxdWVzdBoVLmVhc3lwb3VyLnYxLk1lbnVJdGVtIgASTgoORGVsZXRlTWVudUl0ZW0SIi5lYXN5cG91ci52MS5EZWxldGVNZW51SXRlbVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkiAEItWitlYXN5cG91ci9zZXJ2aWNlL2dlbi9lYXN5cG91ci92MTtlYXN5cG91cnYxYgZwcm90bzM", [file_google_protobuf_empty]);
+  fileDesc("ChplYXN5cG91ci92MS9lYXN5cG91ci5wcm90bxILZWFzeXBvdXIudjEidAoMT3JkZXJSZXF1ZXN0EhQKDG1lbnVfaXRlbV9pZBgBIAEoCRIRCglhZGRfc3VnYXIYAiABKAgSEAoIYWRkX21pbGsYAyABKAgSFAoMc3VnYXJfYW1vdW50GAQgASgFEhMKC21pbGtfYW1vdW50GAUgASgFIqsBCg1PcmRlclJlc3BvbnNlEhAKCG9yZGVyX2lkGAEgASgJEhQKDG1lbnVfaXRlbV9pZBgCIAEoCRIRCglhZGRfc3VnYXIYAyABKAgSEAoIYWRkX21pbGsYBCABKAgSFAoMc3VnYXJfYW1vdW50GAUgASgFEhMKC21pbGtfYW1vdW50GAYgASgFEg4KBnN0YXR1cxgHIAEoCRISCgpjcmVhdGVkX2F0GAggASgDIskBCgVPcmRlchIQCghvcmRlcl9pZBgBIAEoCRIUCgxtZW51X2l0ZW1faWQYAiABKAkSEAoIdXNlcm5hbWUYAyABKAkSEQoJYWRkX3N1Z2FyGAQgASgIEhAKCGFkZF9taWxrGAUgASgIEhQKDHN1Z2FyX2Ftb3VudBgGIAEoBRITCgttaWxrX2Ftb3VudBgHIAEoBRIOCgZzdGF0dXMYCCABKAkSEgoKY3JlYXRlZF9hdBgJIAEoAxISCgp1cGRhdGVkX2F0GAogASgDIiMKD0dldE9yZGVyUmVxdWVzdBIQCghvcmRlcl9pZBgBIAEoCSI1ChBHZXRPcmRlclJlc3BvbnNlEiEKBW9yZGVyGAEgASgLMhIuZWFzeXBvdXIudjEuT3JkZXIiEwoRTGlzdE9yZGVyc1JlcXVlc3QiOAoSTGlzdE9yZGVyc1Jlc3BvbnNlEiIKBm9yZGVycxgBIAMoCzISLmVhc3lwb3VyLnYxLk9yZGVyIjwKGFVwZGF0ZU9yZGVyU3RhdHVzUmVxdWVzdBIQCghvcmRlcl9pZBgBIAEoCRIOCgZzdGF0dXMYAiABKAkiPgoZVXBkYXRlT3JkZXJTdGF0dXNSZXNwb25zZRIhCgVvcmRlchgBIAEoCzISLmVhc3lwb3VyLnYxLk9yZGVyIo0BCghNZW51SXRlbRIKCgJpZBgGIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhYKDnN1cHBvcnRzX3N1Z2FyGAQgASgIEhUKDXN1cHBvcnRzX21pbGsYBSABKAgSEQoJaW1hZ2VfdXJsGAcgASgJEhAKCGNhdGVnb3J5GAggASgJIhAKDkdldE1lbnVSZXF1ZXN0IjcKD0dldE1lbnVSZXNwb25zZRIkCgVpdGVtcxgBIAMoCzIVLmVhc3lwb3VyLnYxLk1lbnVJdGVtIjwKFUNyZWF0ZU1lbnVJdGVtUmVxdWVzdBIjCgRpdGVtGAEgASgLMhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iPAoVVXBkYXRlTWVudUl0ZW1SZXF1ZXN0EiMKBGl0ZW0YASABKAsyFS5lYXN5cG91ci52MS5NZW51SXRlbSIjChVEZWxldGVNZW51SXRlbVJlcXVlc3QSCgoCaWQYASABKAkiDQoLSW5pdFJlcXVlc3QiVAoMSW5pdFJlc3BvbnNlEg8KB3ZlcnNpb24YASABKAkSMwoPb2F1dGhfcHJvdmlkZXJzGAIgAygLMhouZWFzeXBvdXIudjEuT0F1dGhQcm92aWRlciIXChVHZXRDdXJyZW50VXNlclJlcXVlc3QiOwoNT0F1dGhQcm92aWRlchIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhAKCGF1dGhfdXJsGAMgASgJIosBChZHZXRDdXJyZW50VXNlclJlc3BvbnNlEhgKEGlzX2F1dGhlbnRpY2F0ZWQYASABKAgSEAoIdXNlcm5hbWUYAiABKAkSEAoIaXNfYWRtaW4YAyABKAgSMwoPb2F1dGhfcHJvdmlkZXJzGAQgAygLMhouZWFzeXBvdXIudjEuT0F1dGhQcm92aWRlcjKsBgoPRWFzeVBvdXJTZXJ2aWNlEj0KBEluaXQSGC5lYXN5cG91ci52MS5Jbml0UmVxdWVzdBoZLmVhc3lwb3VyLnYxLkluaXRSZXNwb25zZSIAEkYKB0dldE1lbnUSGy5lYXN5cG91ci52MS5HZXRNZW51UmVxdWVzdBocLmVhc3lwb3VyLnYxLkdldE1lbnVSZXNwb25zZSIAEkUKCk9yZGVyRHJpbmsSGS5lYXN5cG91ci52MS5PcmRlclJlcXVlc3QaGi5lYXN5cG91ci52MS5PcmRlclJlc3BvbnNlIgASWwoOR2V0Q3VycmVudFVzZXISIi5lYXN5cG91ci52MS5HZXRDdXJyZW50VXNlclJlcXVlc3QaIy5lYXN5cG91ci52MS5HZXRDdXJyZW50VXNlclJlc3BvbnNlIgASTQoOQ3JlYXRlTWVudUl0ZW0SIi5lYXN5cG91ci52MS5DcmVhdGVNZW51SXRlbVJlcXVlc3QaFS5lYXN5cG91ci52MS5NZW51SXRlbSIAEk0KDlVwZGF0ZU1lbnVJdGVtEiIuZWFzeXBvdXIudjEuVXBkYXRlTWVudUl0ZW1SZXF1ZXN0GhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iABJOCg5EZWxldGVNZW51SXRlbRIiLmVhc3lwb3VyLnYxLkRlbGV0ZU1lbnVJdGVtUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIAEkkKCEdldE9yZGVyEhwuZWFzeXBvdXIudjEuR2V0T3JkZXJSZXF1ZXN0Gh0uZWFzeXBvdXIudjEuR2V0T3JkZXJSZXNwb25zZSIAEk8KCkxpc3RPcmRlcnMSHi5lYXN5cG91ci52MS5MaXN0T3JkZXJzUmVxdWVzdBofLmVhc3lwb3VyLnYxLkxpc3RPcmRlcnNSZXNwb25zZSIAEmQKEVVwZGF0ZU9yZGVyU3RhdHVzEiUuZWFzeXBvdXIudjEuVXBkYXRlT3JkZXJTdGF0dXNSZXF1ZXN0GiYuZWFzeXBvdXIudjEuVXBkYXRlT3JkZXJTdGF0dXNSZXNwb25zZSIAQi1aK2Vhc3lwb3VyL3NlcnZpY2UvZ2VuL2Vhc3lwb3VyL3YxO2Vhc3lwb3VydjFiBnByb3RvMw", [file_google_protobuf_empty]);
 
 /**
  * OrderRequest represents a request to order a menu item (beverage or food)
@@ -60,7 +60,7 @@ export const OrderRequestSchema: GenMessage<OrderRequest> = /*@__PURE__*/
   messageDesc(file_easypour_v1_easypour, 0);
 
 /**
- * OrderResponse represents the response after placing an order
+ * OrderResponse represents the response after placing an order (used for OrderDrink creation).
  *
  * @generated from message easypour.v1.OrderResponse
  */
@@ -98,7 +98,7 @@ export type OrderResponse = Message<"easypour.v1.OrderResponse"> & {
   milkAmount: number;
 
   /**
-   * e.g., "preparing", "ready", "completed"
+   * e.g., "pending", "preparing", "delivered"
    *
    * @generated from field: string status = 7;
    */
@@ -118,6 +118,191 @@ export type OrderResponse = Message<"easypour.v1.OrderResponse"> & {
  */
 export const OrderResponseSchema: GenMessage<OrderResponse> = /*@__PURE__*/
   messageDesc(file_easypour_v1_easypour, 1);
+
+/**
+ * Order is a persisted order (includes username for ownership). Used by GetOrder, ListOrders, UpdateOrderStatus.
+ *
+ * @generated from message easypour.v1.Order
+ */
+export type Order = Message<"easypour.v1.Order"> & {
+  /**
+   * @generated from field: string order_id = 1;
+   */
+  orderId: string;
+
+  /**
+   * @generated from field: string menu_item_id = 2;
+   */
+  menuItemId: string;
+
+  /**
+   * order owner; empty when auth disabled
+   *
+   * @generated from field: string username = 3;
+   */
+  username: string;
+
+  /**
+   * @generated from field: bool add_sugar = 4;
+   */
+  addSugar: boolean;
+
+  /**
+   * @generated from field: bool add_milk = 5;
+   */
+  addMilk: boolean;
+
+  /**
+   * @generated from field: int32 sugar_amount = 6;
+   */
+  sugarAmount: number;
+
+  /**
+   * @generated from field: int32 milk_amount = 7;
+   */
+  milkAmount: number;
+
+  /**
+   * "pending", "preparing", "delivered"
+   *
+   * @generated from field: string status = 8;
+   */
+  status: string;
+
+  /**
+   * @generated from field: int64 created_at = 9;
+   */
+  createdAt: bigint;
+
+  /**
+   * @generated from field: int64 updated_at = 10;
+   */
+  updatedAt: bigint;
+};
+
+/**
+ * Describes the message easypour.v1.Order.
+ * Use `create(OrderSchema)` to create a new message.
+ */
+export const OrderSchema: GenMessage<Order> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 2);
+
+/**
+ * GetOrderRequest requests a single order by id. Requires auth; returns own order or admin sees any.
+ *
+ * @generated from message easypour.v1.GetOrderRequest
+ */
+export type GetOrderRequest = Message<"easypour.v1.GetOrderRequest"> & {
+  /**
+   * @generated from field: string order_id = 1;
+   */
+  orderId: string;
+};
+
+/**
+ * Describes the message easypour.v1.GetOrderRequest.
+ * Use `create(GetOrderRequestSchema)` to create a new message.
+ */
+export const GetOrderRequestSchema: GenMessage<GetOrderRequest> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 3);
+
+/**
+ * GetOrderResponse returns the order when found and caller has permission.
+ *
+ * @generated from message easypour.v1.GetOrderResponse
+ */
+export type GetOrderResponse = Message<"easypour.v1.GetOrderResponse"> & {
+  /**
+   * @generated from field: easypour.v1.Order order = 1;
+   */
+  order?: Order;
+};
+
+/**
+ * Describes the message easypour.v1.GetOrderResponse.
+ * Use `create(GetOrderResponseSchema)` to create a new message.
+ */
+export const GetOrderResponseSchema: GenMessage<GetOrderResponse> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 4);
+
+/**
+ * ListOrdersRequest lists orders. Requires auth; regular users see own, admins see all.
+ *
+ * @generated from message easypour.v1.ListOrdersRequest
+ */
+export type ListOrdersRequest = Message<"easypour.v1.ListOrdersRequest"> & {
+};
+
+/**
+ * Describes the message easypour.v1.ListOrdersRequest.
+ * Use `create(ListOrdersRequestSchema)` to create a new message.
+ */
+export const ListOrdersRequestSchema: GenMessage<ListOrdersRequest> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 5);
+
+/**
+ * ListOrdersResponse returns the list of orders (filtered by backend).
+ *
+ * @generated from message easypour.v1.ListOrdersResponse
+ */
+export type ListOrdersResponse = Message<"easypour.v1.ListOrdersResponse"> & {
+  /**
+   * @generated from field: repeated easypour.v1.Order orders = 1;
+   */
+  orders: Order[];
+};
+
+/**
+ * Describes the message easypour.v1.ListOrdersResponse.
+ * Use `create(ListOrdersResponseSchema)` to create a new message.
+ */
+export const ListOrdersResponseSchema: GenMessage<ListOrdersResponse> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 6);
+
+/**
+ * UpdateOrderStatusRequest updates an order's status. Requires auth; permissions enforced by backend.
+ *
+ * @generated from message easypour.v1.UpdateOrderStatusRequest
+ */
+export type UpdateOrderStatusRequest = Message<"easypour.v1.UpdateOrderStatusRequest"> & {
+  /**
+   * @generated from field: string order_id = 1;
+   */
+  orderId: string;
+
+  /**
+   * "pending", "preparing", "delivered"
+   *
+   * @generated from field: string status = 2;
+   */
+  status: string;
+};
+
+/**
+ * Describes the message easypour.v1.UpdateOrderStatusRequest.
+ * Use `create(UpdateOrderStatusRequestSchema)` to create a new message.
+ */
+export const UpdateOrderStatusRequestSchema: GenMessage<UpdateOrderStatusRequest> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 7);
+
+/**
+ * UpdateOrderStatusResponse returns the updated order.
+ *
+ * @generated from message easypour.v1.UpdateOrderStatusResponse
+ */
+export type UpdateOrderStatusResponse = Message<"easypour.v1.UpdateOrderStatusResponse"> & {
+  /**
+   * @generated from field: easypour.v1.Order order = 1;
+   */
+  order?: Order;
+};
+
+/**
+ * Describes the message easypour.v1.UpdateOrderStatusResponse.
+ * Use `create(UpdateOrderStatusResponseSchema)` to create a new message.
+ */
+export const UpdateOrderStatusResponseSchema: GenMessage<UpdateOrderStatusResponse> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 8);
 
 /**
  * MenuItem represents an item in the menu (beverage, food, etc.)
@@ -172,7 +357,7 @@ export type MenuItem = Message<"easypour.v1.MenuItem"> & {
  * Use `create(MenuItemSchema)` to create a new message.
  */
 export const MenuItemSchema: GenMessage<MenuItem> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 2);
+  messageDesc(file_easypour_v1_easypour, 9);
 
 /**
  * GetMenuRequest is a request to get the menu
@@ -187,7 +372,7 @@ export type GetMenuRequest = Message<"easypour.v1.GetMenuRequest"> & {
  * Use `create(GetMenuRequestSchema)` to create a new message.
  */
 export const GetMenuRequestSchema: GenMessage<GetMenuRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 3);
+  messageDesc(file_easypour_v1_easypour, 10);
 
 /**
  * GetMenuResponse contains the menu items
@@ -206,7 +391,7 @@ export type GetMenuResponse = Message<"easypour.v1.GetMenuResponse"> & {
  * Use `create(GetMenuResponseSchema)` to create a new message.
  */
 export const GetMenuResponseSchema: GenMessage<GetMenuResponse> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 4);
+  messageDesc(file_easypour_v1_easypour, 11);
 
 /**
  * CreateMenuItemRequest creates a new menu item (admin only)
@@ -227,7 +412,7 @@ export type CreateMenuItemRequest = Message<"easypour.v1.CreateMenuItemRequest">
  * Use `create(CreateMenuItemRequestSchema)` to create a new message.
  */
 export const CreateMenuItemRequestSchema: GenMessage<CreateMenuItemRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 5);
+  messageDesc(file_easypour_v1_easypour, 12);
 
 /**
  * UpdateMenuItemRequest updates an existing menu item (admin only)
@@ -248,7 +433,7 @@ export type UpdateMenuItemRequest = Message<"easypour.v1.UpdateMenuItemRequest">
  * Use `create(UpdateMenuItemRequestSchema)` to create a new message.
  */
 export const UpdateMenuItemRequestSchema: GenMessage<UpdateMenuItemRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 6);
+  messageDesc(file_easypour_v1_easypour, 13);
 
 /**
  * DeleteMenuItemRequest deletes a menu item by id (admin only)
@@ -267,7 +452,46 @@ export type DeleteMenuItemRequest = Message<"easypour.v1.DeleteMenuItemRequest">
  * Use `create(DeleteMenuItemRequestSchema)` to create a new message.
  */
 export const DeleteMenuItemRequestSchema: GenMessage<DeleteMenuItemRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 7);
+  messageDesc(file_easypour_v1_easypour, 14);
+
+/**
+ * InitRequest is a request for app bootstrap data (version, OAuth providers).
+ *
+ * @generated from message easypour.v1.InitRequest
+ */
+export type InitRequest = Message<"easypour.v1.InitRequest"> & {
+};
+
+/**
+ * Describes the message easypour.v1.InitRequest.
+ * Use `create(InitRequestSchema)` to create a new message.
+ */
+export const InitRequestSchema: GenMessage<InitRequest> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 15);
+
+/**
+ * InitResponse returns app version and configured OAuth2 providers for the login form.
+ *
+ * @generated from message easypour.v1.InitResponse
+ */
+export type InitResponse = Message<"easypour.v1.InitResponse"> & {
+  /**
+   * @generated from field: string version = 1;
+   */
+  version: string;
+
+  /**
+   * @generated from field: repeated easypour.v1.OAuthProvider oauth_providers = 2;
+   */
+  oauthProviders: OAuthProvider[];
+};
+
+/**
+ * Describes the message easypour.v1.InitResponse.
+ * Use `create(InitResponseSchema)` to create a new message.
+ */
+export const InitResponseSchema: GenMessage<InitResponse> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 16);
 
 /**
  * GetCurrentUserRequest is a request for the current user (when auth is enabled)
@@ -282,7 +506,7 @@ export type GetCurrentUserRequest = Message<"easypour.v1.GetCurrentUserRequest">
  * Use `create(GetCurrentUserRequestSchema)` to create a new message.
  */
 export const GetCurrentUserRequestSchema: GenMessage<GetCurrentUserRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 8);
+  messageDesc(file_easypour_v1_easypour, 17);
 
 /**
  * OAuthProvider describes a configured OAuth2 login provider for the login form
@@ -317,7 +541,7 @@ export type OAuthProvider = Message<"easypour.v1.OAuthProvider"> & {
  * Use `create(OAuthProviderSchema)` to create a new message.
  */
 export const OAuthProviderSchema: GenMessage<OAuthProvider> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 9);
+  messageDesc(file_easypour_v1_easypour, 18);
 
 /**
  * GetCurrentUserResponse returns the authenticated user when auth is enabled,
@@ -354,7 +578,7 @@ export type GetCurrentUserResponse = Message<"easypour.v1.GetCurrentUserResponse
  * Use `create(GetCurrentUserResponseSchema)` to create a new message.
  */
 export const GetCurrentUserResponseSchema: GenMessage<GetCurrentUserResponse> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 10);
+  messageDesc(file_easypour_v1_easypour, 19);
 
 /**
  * EasyPourService provides methods for the menu and orders
@@ -362,6 +586,16 @@ export const GetCurrentUserResponseSchema: GenMessage<GetCurrentUserResponse> = 
  * @generated from service easypour.v1.EasyPourService
  */
 export const EasyPourService: GenService<{
+  /**
+   * Init returns app version and configured OAuth2 providers. Callable unauthenticated on load.
+   *
+   * @generated from rpc easypour.v1.EasyPourService.Init
+   */
+  init: {
+    methodKind: "unary";
+    input: typeof InitRequestSchema;
+    output: typeof InitResponseSchema;
+  },
   /**
    * GetMenu returns the menu (beverages, food, etc.)
    *
@@ -421,6 +655,36 @@ export const EasyPourService: GenService<{
     methodKind: "unary";
     input: typeof DeleteMenuItemRequestSchema;
     output: typeof EmptySchema;
+  },
+  /**
+   * GetOrder returns a single order by id. Requires auth; caller must own order or be admin.
+   *
+   * @generated from rpc easypour.v1.EasyPourService.GetOrder
+   */
+  getOrder: {
+    methodKind: "unary";
+    input: typeof GetOrderRequestSchema;
+    output: typeof GetOrderResponseSchema;
+  },
+  /**
+   * ListOrders returns orders for the caller (own orders) or all orders if admin. Requires auth.
+   *
+   * @generated from rpc easypour.v1.EasyPourService.ListOrders
+   */
+  listOrders: {
+    methodKind: "unary";
+    input: typeof ListOrdersRequestSchema;
+    output: typeof ListOrdersResponseSchema;
+  },
+  /**
+   * UpdateOrderStatus updates an order's status. Requires auth; admin can set preparing/delivered, user can set delivered for own orders.
+   *
+   * @generated from rpc easypour.v1.EasyPourService.UpdateOrderStatus
+   */
+  updateOrderStatus: {
+    methodKind: "unary";
+    input: typeof UpdateOrderStatusRequestSchema;
+    output: typeof UpdateOrderStatusResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_easypour_v1_easypour, 0);

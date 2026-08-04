@@ -1,32 +1,41 @@
 <template>
   <main class="user-profile-page">
-    <section class="padding">
-      <div class="profile-header">
+    <section class="with-header-and-content profile-section">
+      <div class="section-header">
         <h2>Profile</h2>
-        <button @click="$router.push('/')" aria-label="Back to menu">Back</button>
+        <button type="button" class="button" @click="$router.push('/')" aria-label="Back to menu">Back</button>
       </div>
-
-      <div v-if="!username" class="profile-guest">
-        <p>You are not logged in.</p>
-        <p>Log in to see your profile.</p>
-      </div>
-
-      <div v-else class="profile-content">
-        <dl class="profile-details">
-          <dt>Username</dt>
-          <dd>{{ username }}</dd>
-          <dt v-if="isAdmin">Role</dt>
-          <dd v-if="isAdmin">Admin</dd>
-        </dl>
-        <div class="logout-section">
-          <button type="button" class="logout-btn" @click="handleLogout">Log out</button>
+      <div class="section-content padding">
+        <div v-if="!username" class="profile-guest">
+          <p>You are not logged in.</p>
+          <p>Log in to see your profile.</p>
         </div>
-        <div v-if="isAdmin" class="edit-mode-section">
-          <label class="edit-mode-toggle">
-            <input v-model="editMode" type="checkbox" />
-            <span>Edit mode</span>
-          </label>
-          <p class="edit-mode-hint">When on, you can add, edit, and delete menu items on the Menu page.</p>
+        <template v-else>
+          <dl class="profile-details">
+            <dt>Username</dt>
+            <dd>{{ username }}</dd>
+            <dt v-if="isAdmin">Role</dt>
+            <dd v-if="isAdmin">Admin</dd>
+          </dl>
+          <template v-if="isAdmin">
+            <hr class="profile-divider" />
+            <label class="edit-mode-toggle">
+              <input v-model="editMode" type="checkbox" />
+              <span>Edit mode</span>
+            </label>
+            <p class="edit-mode-hint">When on, you can add, edit, and delete menu items on the Menu page.</p>
+          </template>
+        </template>
+      </div>
+    </section>
+    <section v-if="username" class="with-header-and-content profile-actions-section">
+      <div class="section-header">
+        <h2>Actions</h2>
+      </div>
+      <div class="section-content padding">
+        <div class="profile-actions-buttons">
+          <router-link v-if="isAdmin" to="/orders" class="button">Admin Control Panel</router-link>
+          <button type="button" class="button" @click="handleLogout">Log out</button>
         </div>
       </div>
     </section>
@@ -49,30 +58,39 @@ async function handleLogout() {
 </script>
 
 <style scoped>
-.profile-header {
+.user-profile-page {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 1.5rem;
+  padding-top: 1rem;
+  gap: 1rem;
 }
 
-.profile-header h2 {
-  margin: 0;
+.profile-section {
+  width: 100%;
+  max-width: 36rem;
+}
+
+.profile-actions-section {
+  width: 100%;
+  max-width: 36rem;
+}
+
+.profile-actions-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .profile-guest {
-  color: var(--text-muted, #666);
-}
-
-.profile-content {
-  max-width: 400px;
+  color: var(--karma-info-fg, #666);
 }
 
 .profile-details {
-  margin: 0;
+  margin: 0 0 1rem;
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.5rem 1.5rem;
+  gap: 0.25rem 1rem;
 }
 
 .profile-details dt {
@@ -84,28 +102,10 @@ async function handleLogout() {
   margin: 0;
 }
 
-.logout-section {
-  margin-top: 1.5rem;
-}
-
-.logout-btn {
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
-  background: var(--button-secondary-bg, #f0f0f0);
-  color: var(--text, #333);
-  border: 1px solid var(--border-color, #ccc);
-  border-radius: 4px;
-}
-
-.logout-btn:hover {
-  background: var(--button-secondary-hover-bg, #e5e5e5);
-}
-
-.edit-mode-section {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color, #eee);
+.profile-divider {
+  margin: 1rem 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
 }
 
 .edit-mode-toggle {
@@ -121,8 +121,8 @@ async function handleLogout() {
 }
 
 .edit-mode-hint {
-  margin: 0.5rem 0 0 0;
+  margin: 0.25rem 0 0.5rem;
   font-size: 0.9rem;
-  color: var(--text-muted, #666);
+  color: var(--karma-info-fg, #666);
 }
 </style>
