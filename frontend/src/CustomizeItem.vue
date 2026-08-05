@@ -19,57 +19,43 @@
           </svg>
         </div>
       </div>
-      
-	  <div class = "dialog-content">
-        <h3>Customize your {{ itemName }}:</h3>
-      <div v-if="menuItem?.supportsSugar" class="option-group">
-        <div class="option-row">
-          <button type="button" class="icon-toggle" :class="{ active: addSugar }" :aria-pressed="addSugar" aria-label="Add Sugar" @click="toggleSugar">
-            <svg v-if="!addSugar" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14" /></svg>
-          </button>
-          <span :class="{ checked: addSugar }">Add Sugar</span>
-        </div>
-        <div v-if="addSugar" class="sugar-control">
-          <input
-            type="range"
-            v-model.number="sugarAmount"
-            min="1"
-            max="3"
-            step="1"
-            class="sugar-slider"
+
+      <div class="dialog-content">
+        <h3 v-if="hasCustomizationOptions">Customize your {{ itemName }}:</h3>
+
+        <FormField v-if="menuItem?.supportsSugar" label="Sugar" fake>
+          <RadioGroup
+            v-model="sugarChoice"
+            name="customize-sugar"
+            aria-label="Sugar"
+            :options="sugarOptions"
           />
-          <div class="sugar-labels">
-            <span :class="{ active: sugarAmount === 1 }">1 spoon</span>
-            <span :class="{ active: sugarAmount === 2 }">2 spoons</span>
-            <span :class="{ active: sugarAmount === 3 }">diabetes</span>
-          </div>
-        </div>
-      </div>
+        </FormField>
 
-      <div v-if="menuItem?.supportsMilk" class="option-group">
-        <div class="option-row">
-          <button type="button" class="icon-toggle" :class="{ active: addMilk }" :aria-pressed="addMilk" aria-label="Add Milk" @click="addMilk = !addMilk">
-            <svg v-if="!addMilk" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14" /></svg>
+        <FormField v-if="menuItem?.supportsMilk" label="Milk" fake>
+          <RadioGroup
+            v-model="addMilk"
+            name="customize-milk"
+            variant="boolean"
+            aria-label="Milk"
+            :options="milkOptions"
+          />
+        </FormField>
+
+        <div class="toolbar">
+          <button type="button" class="good" @click="addToBasket" :disabled="adding">
+            {{ adding ? 'Updating...' : (props.editBasketIndex != null ? 'Update in Basket' : 'Add to Basket') }}
           </button>
-          <span :class="{ checked: addMilk }">Add Milk</span>
         </div>
       </div>
-
-      <div class="toolbar" style="display: flex; gap: 1em">
-        <button class="good" @click="addToBasket" :disabled="adding">
-          {{ adding ? 'Updating...' : (props.editBasketIndex != null ? 'Update in Basket' : 'Add to Basket') }}
-        </button>
-      </div>
-
-	  </div>
     </article>
   </dialog>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import FormField from 'picocrank/vue/components/FormField.vue'
+import RadioGroup from 'picocrank/vue/components/RadioGroup.vue'
 
 const props = defineProps({
   menuItem: Object,
@@ -81,42 +67,50 @@ const props = defineProps({
 const emit = defineEmits(['close', 'add-to-basket'])
 
 const dialogRef = ref(null)
-const addSugar = ref(false)
+const sugarChoice = ref('none')
 const addMilk = ref(false)
-const sugarAmount = ref(1) // 1 = 1 spoon, 2 = 2 spoons, 3 = diabetes
 const adding = ref(false)
+
+const sugarOptions = [
+  { label: 'None', value: 'none' },
+  { label: '1 spoon', value: '1' },
+  { label: '2 spoons', value: '2' },
+  { label: 'Diabetes', value: 'diabetes' },
+]
+
+const milkOptions = [
+  { label: 'No', value: false },
+  { label: 'Yes', value: true },
+]
 
 const itemName = computed(() => {
   return props.menuItem?.name || 'Item'
 })
 
+const hasCustomizationOptions = computed(() => {
+  return !!(props.menuItem?.supportsSugar || props.menuItem?.supportsMilk)
+})
+
+function sugarChoiceFromBasketItem(item) {
+  if (!item?.addSugar) return 'none'
+  if (item.sugarType === 'diabetes') return 'diabetes'
+  return String(item.sugarAmount || 1)
+}
+
 watch(() => props.open, (newVal) => {
   if (newVal && dialogRef.value) {
     dialogRef.value.showModal()
     if (props.editBasketItem != null) {
-      addSugar.value = !!props.editBasketItem.addSugar
+      sugarChoice.value = sugarChoiceFromBasketItem(props.editBasketItem)
       addMilk.value = !!props.editBasketItem.addMilk
-      sugarAmount.value = props.editBasketItem.sugarType === 'diabetes' ? 3 : (props.editBasketItem.sugarAmount || 1)
     } else {
-      addSugar.value = false
-      addMilk.value = false
-      sugarAmount.value = 1
+      sugarChoice.value = 'none'
+      addMilk.value = !!props.menuItem?.supportsMilk
     }
   } else if (!newVal && dialogRef.value) {
     dialogRef.value.close()
   }
 })
-
-const toggleSugar = () => {
-  addSugar.value = !addSugar.value
-  updateSugar()
-}
-
-const updateSugar = () => {
-  if (!addSugar.value) {
-    sugarAmount.value = 1 // Reset to default when unchecked
-  }
-}
 
 const close = () => {
   emit('close')
@@ -124,26 +118,26 @@ const close = () => {
 
 const addToBasket = () => {
   if (!props.menuItem) return
-  
+
   adding.value = true
-  
-  // sugarAmount: 1 = 1 spoon, 2 = 2 spoons, 3 = diabetes
-  const sugarValue = addSugar.value ? sugarAmount.value : 0
-  const isDiabetes = sugarValue === 3
-  
+
+  const choice = sugarChoice.value
+  const withSugar = choice !== 'none'
+  const isDiabetes = choice === 'diabetes'
+
   const basketItem = {
     id: props.menuItem.id,
     name: props.menuItem.name,
     imageUrl: props.menuItem?.imageUrl,
-    addSugar: addSugar.value,
+    addSugar: withSugar,
     addMilk: addMilk.value,
-    sugarAmount: isDiabetes ? 0 : sugarValue,
+    sugarAmount: isDiabetes || !withSugar ? 0 : Number(choice),
     sugarType: isDiabetes ? 'diabetes' : 'normal',
-    milkAmount: addMilk.value ? 50 : 0, // Default milk amount when checked
+    milkAmount: addMilk.value ? 50 : 0,
     supportsSugar: props.menuItem.supportsSugar,
     supportsMilk: props.menuItem.supportsMilk,
   }
-  
+
   const editIndex = props.editBasketIndex
   if (editIndex !== undefined && editIndex !== null) {
     emit('add-to-basket', basketItem, editIndex)
@@ -165,7 +159,7 @@ const addToBasket = () => {
 
 @media (max-width: 767px) {
   .customize-dialog {
-	max-width: 100vw;
+    max-width: 100vw;
     margin-top: 1em;
     margin-bottom: auto;
     max-height: calc(100vh - 1em);
@@ -238,82 +232,15 @@ const addToBasket = () => {
   color: #999;
 }
 
-.dialog-header h3 {
-  margin: 0;
-}
-
-.option-group {
-  margin-bottom: 1rem;
-}
-
-.option-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.icon-toggle {
-  width: 1.75rem;
-  height: 1.75rem;
-  padding: 0;
-  border: 1px solid #ccc;
-  background: #fff;
-  color: #333;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.25rem;
-  flex-shrink: 0;
-}
-
-.icon-toggle:hover {
-  border-color: #999;
-  background: #f5f5f5;
-}
-
-.icon-toggle.active {
-  border-color: #333;
-  background: #eee;
-  color: #000;
-}
-
-.icon-toggle svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.option-row span.checked {
-  font-weight: 600;
-  color: #000;
-}
-
-.sugar-control {
-  margin-top: 0.5rem;
-}
-
-.sugar-slider {
-  width: 100%;
-  margin-bottom: 0.5rem;
-}
-
-.sugar-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
-}
-
-.sugar-labels span {
-  color: #666;
-}
-
-.sugar-labels span.active {
-  color: #000;
-  font-weight: bold;
-}
-
 .dialog-content {
   padding: 0 1rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.toolbar {
+  display: flex;
+  gap: 1em;
 }
 </style>
-

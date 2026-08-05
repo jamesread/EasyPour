@@ -4,26 +4,33 @@ items:
       description: Freshly brewed coffee
       supports_sugar: true
       supports_milk: true
-      image_url: /images/41865c1c-8fe2-4d19-94ec-cc15522a4b68.jpg
+      image_url: /images/ea53a3d8-2bc4-435a-9b6d-bced90e7c22e.webp
       category: Drinks
     - id: tea
       name: Tea
       description: Hot tea
       supports_sugar: true
       supports_milk: true
-      image_url: /images/43cf0fd8-51cf-4941-905e-fee7033adfea.png
+      image_url: /images/6ef15a78-01ba-4f3c-a41d-bdd23dff75ce.jpg
       category: Drinks
     - id: hot-chocolate
       name: Hot Chocolate
       description: Rich hot chocolate
       supports_sugar: false
       supports_milk: true
-      image_url: ""
+      image_url: /images/7e8c8884-fc28-4999-aecb-e6b312a6d7d3.jpg
       category: Drinks
     - id: item-3ab22e63
       name: Marmite Toast
       description: yummo!
       supports_sugar: false
       supports_milk: false
-      image_url: /images/f862d773-9fc6-49cd-aa9a-888bdb6e9288.jpg
+      image_url: /images/9a3b7d16-1e04-4f2d-b2e1-de3a949aea8e.jpg
       category: Snacks
+    - id: item-53f2339c
+      name: Strongbow Dark Fuit
+      description: Suggery alcoholic blackcurrent juice
+      supports_sugar: false
+      supports_milk: false
+      image_url: /images/f5f92d05-54a1-4610-905e-931043922813.avif
+      category: Alcohol

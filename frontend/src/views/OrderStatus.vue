@@ -7,8 +7,8 @@
       <div class="not-found-card">
         <p class="not-found-msg">{{ loadError }}</p>
         <div class="status-actions">
-          <button class="btn-secondary" @click="$router.push('/orders')">View all orders</button>
-          <button class="btn-primary" @click="$router.push('/')">Browse menu</button>
+          <button type="button" class="neutral" @click="goToOrdersList">View all orders</button>
+          <button type="button" class="good" @click="$router.push('/')">Browse menu</button>
         </div>
       </div>
     </div>
@@ -16,23 +16,27 @@
       <div class="not-found-card">
         <p class="not-found-msg">We couldn’t find that order.</p>
         <div class="status-actions">
-          <button class="btn-secondary" @click="$router.push('/orders')">View all orders</button>
-          <button class="btn-primary" @click="$router.push('/')">Browse menu</button>
+          <button type="button" class="neutral" @click="goToOrdersList">View all orders</button>
+          <button type="button" class="good" @click="$router.push('/')">Browse menu</button>
         </div>
       </div>
     </div>
 
     <div v-else class="order-status-inner" aria-live="polite">
-      <!-- Confirmation hero -->
+      <!-- Status hero -->
       <div class="confirmation-hero">
-        <div class="confirmation-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div class="confirmation-icon" :class="heroIconClass" aria-hidden="true">
+          <svg v-if="stepIndex === 0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
             <polyline points="22 4 12 14.01 9 11.01"/>
           </svg>
         </div>
-        <h1 class="confirmation-title">Order confirmed!</h1>
-        <p class="confirmation-subtitle">We’re getting your order ready.</p>
+        <h1 class="confirmation-title">{{ heroTitle }}</h1>
+        <p class="confirmation-subtitle">{{ heroSubtitle }}</p>
         <p class="order-number">Order #{{ displayOrderId }}</p>
       </div>
 
@@ -104,7 +108,7 @@
       <div v-if="canMarkDelivered && stepIndex < 2" class="admin-actions">
         <button
           type="button"
-          class="btn-delivered"
+          class="good"
           :disabled="markingDelivered"
           @click="markAsDelivered"
         >
@@ -114,10 +118,10 @@
 
       <!-- Actions -->
       <div class="status-actions">
-        <button class="btn-primary" @click="$router.push('/')">
+        <button type="button" class="good" @click="$router.push('/')">
           Back to menu
         </button>
-        <button class="btn-secondary" @click="$router.push('/orders')">
+        <button type="button" class="neutral" @click="goToOrdersList">
           View all orders
         </button>
       </div>
@@ -127,13 +131,14 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { DrinkIcon } from '@hugeicons/core-free-icons'
 import { useRecentOrders } from '../composables/useRecentOrders'
 import { useCurrentUser } from '../composables/useCurrentUser'
 
 const route = useRoute()
+const router = useRouter()
 const { getOrderGroup, recentOrders, updateOrderStatus, refresh } = useRecentOrders()
 const { isAdmin } = useCurrentUser()
 const markingDelivered = ref(false)
@@ -142,6 +147,10 @@ const loadError = ref(null)
 const group = ref(null)
 
 const orderId = computed(() => route.params.orderId)
+
+function goToOrdersList() {
+  router.push({ name: isAdmin.value ? 'AdminOrders' : 'Orders' })
+}
 
 async function loadGroup() {
   const id = orderId.value
@@ -167,12 +176,22 @@ async function loadGroup() {
 watch(orderId, loadGroup, { immediate: false })
 watch(
   () => recentOrders.value,
-  (list) => {
+  async (list) => {
     const id = orderId.value
-    if (!id || !group.value) return
-    const o = list.find((ord) => ord?.orderId === id)
-    if (o && group.value.groupId === id) {
-      group.value = { ...group.value, status: o.status }
+    const current = group.value
+    if (!id || !current || !list?.length) return
+    const groupId = current.groupId
+    const members = list.filter(
+      (o) => o?.groupId === groupId || o?.orderId === groupId || current.orderIds?.includes(o?.orderId),
+    )
+    if (!members.length) return
+    const statuses = members.map((o) => o.status ?? 'pending')
+    let status = 'pending'
+    if (statuses.every((s) => s === 'delivered')) status = 'delivered'
+    else if (statuses.some((s) => s === 'preparing' || s === 'delivered')) status = 'preparing'
+    if (status !== current.status || members.length !== current.items?.length) {
+      const g = await getOrderGroup(id)
+      if (g) group.value = g
     }
   },
   { deep: true }
@@ -197,6 +216,24 @@ const stepIndex = computed(() => {
   const s = (group.value?.status ?? '').toLowerCase()
   if (statusToStep[s] !== undefined) return statusToStep[s]
   return 1
+})
+
+const heroTitle = computed(() => {
+  if (stepIndex.value === 0) return 'Order pending'
+  if (stepIndex.value >= 2) return 'Order ready'
+  return 'Preparing your order'
+})
+
+const heroSubtitle = computed(() => {
+  if (stepIndex.value === 0) return 'Your order has been received and is awaiting acknowledgment.'
+  if (stepIndex.value >= 2) return 'Your order is ready for pickup or delivery.'
+  return 'We’re getting your order ready.'
+})
+
+const heroIconClass = computed(() => {
+  if (stepIndex.value === 0) return 'pending'
+  if (stepIndex.value >= 2) return 'ready'
+  return 'confirmed'
 })
 
 const preparingMessage = computed(() => {
@@ -233,7 +270,7 @@ onMounted(() => {
 <style scoped>
 .order-status-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: transparent;
   padding: 1.5rem 1rem 2rem;
 }
 
@@ -281,11 +318,20 @@ onMounted(() => {
   height: 4rem;
   margin: 0 auto 1rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.confirmation-icon.pending {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+}
+
+.confirmation-icon.confirmed,
+.confirmation-icon.ready {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
 }
 
@@ -507,26 +553,9 @@ onMounted(() => {
   margin-bottom: 1.25rem;
 }
 
-.btn-delivered {
+.admin-actions button,
+.status-actions button {
   width: 100%;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #166534;
-  background: #dcfce7;
-  border: 1px solid #86efac;
-  border-radius: 0.75rem;
-  cursor: pointer;
-}
-
-.btn-delivered:hover:not(:disabled) {
-  background: #bbf7d0;
-  border-color: #4ade80;
-}
-
-.btn-delivered:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
 }
 
 /* Actions */
@@ -534,39 +563,5 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.btn-primary {
-  width: 100%;
-  padding: 0.875rem 1.25rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border: none;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-}
-
-.btn-secondary {
-  width: 100%;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #475569;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
-  cursor: pointer;
-}
-
-.btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
 }
 </style>

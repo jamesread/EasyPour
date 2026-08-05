@@ -13,16 +13,17 @@ import (
 
 // Order is the in-memory representation of a persisted order (matches DB schema).
 type Order struct {
-	ID         string
-	MenuItemID string
-	Username   string
-	AddSugar   bool
-	AddMilk    bool
+	ID          string
+	MenuItemID  string
+	Username    string
+	AddSugar    bool
+	AddMilk     bool
 	SugarAmount int32
 	MilkAmount  int32
-	Status     string
-	CreatedAt  int64
-	UpdatedAt  int64
+	Status      string
+	CreatedAt   int64
+	UpdatedAt   int64
+	GroupID     string
 }
 
 // Store persists orders in SQLite.
@@ -71,7 +72,8 @@ func (s *Store) Init() error {
 			milk_amount INTEGER NOT NULL,
 			status TEXT NOT NULL,
 			created_at INTEGER NOT NULL,
-			updated_at INTEGER NOT NULL
+			updated_at INTEGER NOT NULL,
+			group_id TEXT NOT NULL DEFAULT ''
 		);
 		CREATE INDEX IF NOT EXISTS idx_orders_username ON orders(username);
 		CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
@@ -79,16 +81,40 @@ func (s *Store) Init() error {
 	if err != nil {
 		return fmt.Errorf("init orders table: %w", err)
 	}
+	if err := s.ensureGroupIDColumn(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) ensureGroupIDColumn() error {
+	_, err := s.db.Exec(`ALTER TABLE orders ADD COLUMN group_id TEXT NOT NULL DEFAULT ''`)
+	if err != nil {
+		// Column already exists on freshly created tables / prior migrations.
+		_ = err
+	}
+	_, err = s.db.Exec(`UPDATE orders SET group_id = id WHERE group_id = '' OR group_id IS NULL`)
+	if err != nil {
+		return fmt.Errorf("backfill group_id: %w", err)
+	}
+	_, err = s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_orders_group_id ON orders(group_id)`)
+	if err != nil {
+		return fmt.Errorf("index group_id: %w", err)
+	}
 	return nil
 }
 
 // Create persists an order. Order.ID must be set; CreatedAt/UpdatedAt set to now if zero.
+// Empty GroupID defaults to the order ID.
 func (s *Store) Create(o *Order) error {
 	if s.db == nil {
 		return fmt.Errorf("store not initialized")
 	}
 	if o.ID == "" {
 		return fmt.Errorf("order id required")
+	}
+	if o.GroupID == "" {
+		o.GroupID = o.ID
 	}
 	now := time.Now().Unix()
 	if o.CreatedAt == 0 {
@@ -98,35 +124,70 @@ func (s *Store) Create(o *Order) error {
 		o.UpdatedAt = now
 	}
 	_, err := s.db.Exec(`
-		INSERT INTO orders (id, menu_item_id, username, add_sugar, add_milk, sugar_amount, milk_amount, status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, o.ID, o.MenuItemID, o.Username, boolToInt(o.AddSugar), boolToInt(o.AddMilk), o.SugarAmount, o.MilkAmount, o.Status, o.CreatedAt, o.UpdatedAt)
+		INSERT INTO orders (id, menu_item_id, username, add_sugar, add_milk, sugar_amount, milk_amount, status, created_at, updated_at, group_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, o.ID, o.MenuItemID, o.Username, boolToInt(o.AddSugar), boolToInt(o.AddMilk), o.SugarAmount, o.MilkAmount, o.Status, o.CreatedAt, o.UpdatedAt, o.GroupID)
 	if err != nil {
 		return fmt.Errorf("create order: %w", err)
 	}
 	return nil
 }
 
+func scanOrder(scanner interface {
+	Scan(dest ...any) error
+}) (*Order, error) {
+	var o Order
+	var addSugar, addMilk int
+	err := scanner.Scan(
+		&o.ID, &o.MenuItemID, &o.Username, &addSugar, &addMilk,
+		&o.SugarAmount, &o.MilkAmount, &o.Status, &o.CreatedAt, &o.UpdatedAt, &o.GroupID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	o.AddSugar = addSugar != 0
+	o.AddMilk = addMilk != 0
+	if o.GroupID == "" {
+		o.GroupID = o.ID
+	}
+	return &o, nil
+}
+
+const orderSelectCols = `id, menu_item_id, username, add_sugar, add_milk, sugar_amount, milk_amount, status, created_at, updated_at, group_id`
+
 // Get returns the order by id, or nil if not found.
 func (s *Store) Get(id string) (*Order, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("store not initialized")
 	}
-	var o Order
-	var addSugar, addMilk int
-	err := s.db.QueryRow(`
-		SELECT id, menu_item_id, username, add_sugar, add_milk, sugar_amount, milk_amount, status, created_at, updated_at
-		FROM orders WHERE id = ?
-	`, id).Scan(&o.ID, &o.MenuItemID, &o.Username, &addSugar, &addMilk, &o.SugarAmount, &o.MilkAmount, &o.Status, &o.CreatedAt, &o.UpdatedAt)
+	row := s.db.QueryRow(`SELECT `+orderSelectCols+` FROM orders WHERE id = ?`, id)
+	o, err := scanOrder(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get order: %w", err)
 	}
-	o.AddSugar = addSugar != 0
-	o.AddMilk = addMilk != 0
-	return &o, nil
+	return o, nil
+}
+
+// ListByGroupID returns all orders sharing a group id, oldest first.
+func (s *Store) ListByGroupID(groupID string) ([]*Order, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("store not initialized")
+	}
+	if groupID == "" {
+		return nil, nil
+	}
+	rows, err := s.db.Query(`
+		SELECT `+orderSelectCols+`
+		FROM orders WHERE group_id = ? ORDER BY created_at ASC
+	`, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("list by group: %w", err)
+	}
+	defer rows.Close()
+	return scanOrders(rows)
 }
 
 // List returns orders: when isAdmin is true, all orders; otherwise only orders for the given username. Newest first.
@@ -138,12 +199,12 @@ func (s *Store) List(username string, isAdmin bool) ([]*Order, error) {
 	var err error
 	if isAdmin {
 		rows, err = s.db.Query(`
-			SELECT id, menu_item_id, username, add_sugar, add_milk, sugar_amount, milk_amount, status, created_at, updated_at
+			SELECT ` + orderSelectCols + `
 			FROM orders ORDER BY created_at DESC
 		`)
 	} else {
 		rows, err = s.db.Query(`
-			SELECT id, menu_item_id, username, add_sugar, add_milk, sugar_amount, milk_amount, status, created_at, updated_at
+			SELECT `+orderSelectCols+`
 			FROM orders WHERE username = ? ORDER BY created_at DESC
 		`, username)
 	}
@@ -151,16 +212,17 @@ func (s *Store) List(username string, isAdmin bool) ([]*Order, error) {
 		return nil, fmt.Errorf("list orders: %w", err)
 	}
 	defer rows.Close()
+	return scanOrders(rows)
+}
+
+func scanOrders(rows *sql.Rows) ([]*Order, error) {
 	var list []*Order
 	for rows.Next() {
-		var o Order
-		var addSugar, addMilk int
-		if err := rows.Scan(&o.ID, &o.MenuItemID, &o.Username, &addSugar, &addMilk, &o.SugarAmount, &o.MilkAmount, &o.Status, &o.CreatedAt, &o.UpdatedAt); err != nil {
+		o, err := scanOrder(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan order: %w", err)
 		}
-		o.AddSugar = addSugar != 0
-		o.AddMilk = addMilk != 0
-		list = append(list, &o)
+		list = append(list, o)
 	}
 	return list, rows.Err()
 }
@@ -180,6 +242,22 @@ func (s *Store) UpdateStatus(id, status string) (*Order, error) {
 		return nil, nil
 	}
 	return s.Get(id)
+}
+
+// UpdateStatusByGroupID sets status for every order in the group. Returns the updated orders.
+func (s *Store) UpdateStatusByGroupID(groupID, status string) ([]*Order, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("store not initialized")
+	}
+	if groupID == "" {
+		return nil, nil
+	}
+	now := time.Now().Unix()
+	_, err := s.db.Exec(`UPDATE orders SET status = ?, updated_at = ? WHERE group_id = ?`, status, now, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("update group status: %w", err)
+	}
+	return s.ListByGroupID(groupID)
 }
 
 func boolToInt(b bool) int {
@@ -205,6 +283,7 @@ func (o *Order) ToProto() *easypourv1.Order {
 		Status:      o.Status,
 		CreatedAt:   o.CreatedAt,
 		UpdatedAt:   o.UpdatedAt,
+		GroupId:     o.GroupID,
 	}
 }
 
@@ -224,5 +303,6 @@ func OrderFromProto(p *easypourv1.Order) *Order {
 		Status:      p.GetStatus(),
 		CreatedAt:   p.GetCreatedAt(),
 		UpdatedAt:   p.GetUpdatedAt(),
+		GroupID:     p.GetGroupId(),
 	}
 }

@@ -62,6 +62,15 @@ const (
 	// EasyPourServiceUpdateOrderStatusProcedure is the fully-qualified name of the EasyPourService's
 	// UpdateOrderStatus RPC.
 	EasyPourServiceUpdateOrderStatusProcedure = "/easypour.v1.EasyPourService/UpdateOrderStatus"
+	// EasyPourServiceGetSettingsProcedure is the fully-qualified name of the EasyPourService's
+	// GetSettings RPC.
+	EasyPourServiceGetSettingsProcedure = "/easypour.v1.EasyPourService/GetSettings"
+	// EasyPourServiceUpdateSettingsProcedure is the fully-qualified name of the EasyPourService's
+	// UpdateSettings RPC.
+	EasyPourServiceUpdateSettingsProcedure = "/easypour.v1.EasyPourService/UpdateSettings"
+	// EasyPourServiceTestAppriseNotificationProcedure is the fully-qualified name of the
+	// EasyPourService's TestAppriseNotification RPC.
+	EasyPourServiceTestAppriseNotificationProcedure = "/easypour.v1.EasyPourService/TestAppriseNotification"
 )
 
 // EasyPourServiceClient is a client for the easypour.v1.EasyPourService service.
@@ -86,6 +95,12 @@ type EasyPourServiceClient interface {
 	ListOrders(context.Context, *connect.Request[v1.ListOrdersRequest]) (*connect.Response[v1.ListOrdersResponse], error)
 	// UpdateOrderStatus updates an order's status. Requires auth; admin can set preparing/delivered, user can set delivered for own orders.
 	UpdateOrderStatus(context.Context, *connect.Request[v1.UpdateOrderStatusRequest]) (*connect.Response[v1.UpdateOrderStatusResponse], error)
+	// GetSettings returns runtime settings (admin only).
+	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
+	// UpdateSettings updates runtime settings (admin only).
+	UpdateSettings(context.Context, *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error)
+	// TestAppriseNotification sends a test Apprise notification (admin only).
+	TestAppriseNotification(context.Context, *connect.Request[v1.TestAppriseNotificationRequest]) (*connect.Response[v1.TestAppriseNotificationResponse], error)
 }
 
 // NewEasyPourServiceClient constructs a client for the easypour.v1.EasyPourService service. By
@@ -159,21 +174,42 @@ func NewEasyPourServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(easyPourServiceMethods.ByName("UpdateOrderStatus")),
 			connect.WithClientOptions(opts...),
 		),
+		getSettings: connect.NewClient[v1.GetSettingsRequest, v1.GetSettingsResponse](
+			httpClient,
+			baseURL+EasyPourServiceGetSettingsProcedure,
+			connect.WithSchema(easyPourServiceMethods.ByName("GetSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		updateSettings: connect.NewClient[v1.UpdateSettingsRequest, v1.UpdateSettingsResponse](
+			httpClient,
+			baseURL+EasyPourServiceUpdateSettingsProcedure,
+			connect.WithSchema(easyPourServiceMethods.ByName("UpdateSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		testAppriseNotification: connect.NewClient[v1.TestAppriseNotificationRequest, v1.TestAppriseNotificationResponse](
+			httpClient,
+			baseURL+EasyPourServiceTestAppriseNotificationProcedure,
+			connect.WithSchema(easyPourServiceMethods.ByName("TestAppriseNotification")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // easyPourServiceClient implements EasyPourServiceClient.
 type easyPourServiceClient struct {
-	init              *connect.Client[v1.InitRequest, v1.InitResponse]
-	getMenu           *connect.Client[v1.GetMenuRequest, v1.GetMenuResponse]
-	orderDrink        *connect.Client[v1.OrderRequest, v1.OrderResponse]
-	getCurrentUser    *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
-	createMenuItem    *connect.Client[v1.CreateMenuItemRequest, v1.MenuItem]
-	updateMenuItem    *connect.Client[v1.UpdateMenuItemRequest, v1.MenuItem]
-	deleteMenuItem    *connect.Client[v1.DeleteMenuItemRequest, emptypb.Empty]
-	getOrder          *connect.Client[v1.GetOrderRequest, v1.GetOrderResponse]
-	listOrders        *connect.Client[v1.ListOrdersRequest, v1.ListOrdersResponse]
-	updateOrderStatus *connect.Client[v1.UpdateOrderStatusRequest, v1.UpdateOrderStatusResponse]
+	init                    *connect.Client[v1.InitRequest, v1.InitResponse]
+	getMenu                 *connect.Client[v1.GetMenuRequest, v1.GetMenuResponse]
+	orderDrink              *connect.Client[v1.OrderRequest, v1.OrderResponse]
+	getCurrentUser          *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
+	createMenuItem          *connect.Client[v1.CreateMenuItemRequest, v1.MenuItem]
+	updateMenuItem          *connect.Client[v1.UpdateMenuItemRequest, v1.MenuItem]
+	deleteMenuItem          *connect.Client[v1.DeleteMenuItemRequest, emptypb.Empty]
+	getOrder                *connect.Client[v1.GetOrderRequest, v1.GetOrderResponse]
+	listOrders              *connect.Client[v1.ListOrdersRequest, v1.ListOrdersResponse]
+	updateOrderStatus       *connect.Client[v1.UpdateOrderStatusRequest, v1.UpdateOrderStatusResponse]
+	getSettings             *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
+	updateSettings          *connect.Client[v1.UpdateSettingsRequest, v1.UpdateSettingsResponse]
+	testAppriseNotification *connect.Client[v1.TestAppriseNotificationRequest, v1.TestAppriseNotificationResponse]
 }
 
 // Init calls easypour.v1.EasyPourService.Init.
@@ -226,6 +262,21 @@ func (c *easyPourServiceClient) UpdateOrderStatus(ctx context.Context, req *conn
 	return c.updateOrderStatus.CallUnary(ctx, req)
 }
 
+// GetSettings calls easypour.v1.EasyPourService.GetSettings.
+func (c *easyPourServiceClient) GetSettings(ctx context.Context, req *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error) {
+	return c.getSettings.CallUnary(ctx, req)
+}
+
+// UpdateSettings calls easypour.v1.EasyPourService.UpdateSettings.
+func (c *easyPourServiceClient) UpdateSettings(ctx context.Context, req *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error) {
+	return c.updateSettings.CallUnary(ctx, req)
+}
+
+// TestAppriseNotification calls easypour.v1.EasyPourService.TestAppriseNotification.
+func (c *easyPourServiceClient) TestAppriseNotification(ctx context.Context, req *connect.Request[v1.TestAppriseNotificationRequest]) (*connect.Response[v1.TestAppriseNotificationResponse], error) {
+	return c.testAppriseNotification.CallUnary(ctx, req)
+}
+
 // EasyPourServiceHandler is an implementation of the easypour.v1.EasyPourService service.
 type EasyPourServiceHandler interface {
 	// Init returns app version and configured OAuth2 providers. Callable unauthenticated on load.
@@ -248,6 +299,12 @@ type EasyPourServiceHandler interface {
 	ListOrders(context.Context, *connect.Request[v1.ListOrdersRequest]) (*connect.Response[v1.ListOrdersResponse], error)
 	// UpdateOrderStatus updates an order's status. Requires auth; admin can set preparing/delivered, user can set delivered for own orders.
 	UpdateOrderStatus(context.Context, *connect.Request[v1.UpdateOrderStatusRequest]) (*connect.Response[v1.UpdateOrderStatusResponse], error)
+	// GetSettings returns runtime settings (admin only).
+	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
+	// UpdateSettings updates runtime settings (admin only).
+	UpdateSettings(context.Context, *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error)
+	// TestAppriseNotification sends a test Apprise notification (admin only).
+	TestAppriseNotification(context.Context, *connect.Request[v1.TestAppriseNotificationRequest]) (*connect.Response[v1.TestAppriseNotificationResponse], error)
 }
 
 // NewEasyPourServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -317,6 +374,24 @@ func NewEasyPourServiceHandler(svc EasyPourServiceHandler, opts ...connect.Handl
 		connect.WithSchema(easyPourServiceMethods.ByName("UpdateOrderStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
+	easyPourServiceGetSettingsHandler := connect.NewUnaryHandler(
+		EasyPourServiceGetSettingsProcedure,
+		svc.GetSettings,
+		connect.WithSchema(easyPourServiceMethods.ByName("GetSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	easyPourServiceUpdateSettingsHandler := connect.NewUnaryHandler(
+		EasyPourServiceUpdateSettingsProcedure,
+		svc.UpdateSettings,
+		connect.WithSchema(easyPourServiceMethods.ByName("UpdateSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	easyPourServiceTestAppriseNotificationHandler := connect.NewUnaryHandler(
+		EasyPourServiceTestAppriseNotificationProcedure,
+		svc.TestAppriseNotification,
+		connect.WithSchema(easyPourServiceMethods.ByName("TestAppriseNotification")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/easypour.v1.EasyPourService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case EasyPourServiceInitProcedure:
@@ -339,6 +414,12 @@ func NewEasyPourServiceHandler(svc EasyPourServiceHandler, opts ...connect.Handl
 			easyPourServiceListOrdersHandler.ServeHTTP(w, r)
 		case EasyPourServiceUpdateOrderStatusProcedure:
 			easyPourServiceUpdateOrderStatusHandler.ServeHTTP(w, r)
+		case EasyPourServiceGetSettingsProcedure:
+			easyPourServiceGetSettingsHandler.ServeHTTP(w, r)
+		case EasyPourServiceUpdateSettingsProcedure:
+			easyPourServiceUpdateSettingsHandler.ServeHTTP(w, r)
+		case EasyPourServiceTestAppriseNotificationProcedure:
+			easyPourServiceTestAppriseNotificationHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -386,4 +467,16 @@ func (UnimplementedEasyPourServiceHandler) ListOrders(context.Context, *connect.
 
 func (UnimplementedEasyPourServiceHandler) UpdateOrderStatus(context.Context, *connect.Request[v1.UpdateOrderStatusRequest]) (*connect.Response[v1.UpdateOrderStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.UpdateOrderStatus is not implemented"))
+}
+
+func (UnimplementedEasyPourServiceHandler) GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.GetSettings is not implemented"))
+}
+
+func (UnimplementedEasyPourServiceHandler) UpdateSettings(context.Context, *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.UpdateSettings is not implemented"))
+}
+
+func (UnimplementedEasyPourServiceHandler) TestAppriseNotification(context.Context, *connect.Request[v1.TestAppriseNotificationRequest]) (*connect.Response[v1.TestAppriseNotificationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.TestAppriseNotification is not implemented"))
 }

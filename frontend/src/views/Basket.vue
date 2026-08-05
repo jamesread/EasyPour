@@ -3,12 +3,12 @@
     <section class="padding">
       <div class="basket-header">
         <h2>Basket</h2>
-        <button @click="$router.push('/')" aria-label="Close">Close</button>
+        <button type="button" class="neutral" @click="$router.push('/')" aria-label="Close">Close</button>
       </div>
       
       <div v-if="basketItems.length === 0" class="empty-basket">
         <p>Your basket is empty</p>
-        <button @click="$router.push('/')">Browse Menu</button>
+        <button type="button" class="neutral" @click="$router.push('/')">Browse Menu</button>
       </div>
       
       <div v-else>
@@ -36,12 +36,12 @@
               Milk
             </div>
           </div>
-          <button @click.stop="removeFromBasket(index)" aria-label="Remove item">Remove</button>
+          <button type="button" class="bad" @click.stop="removeFromBasket(index)" aria-label="Remove item">Remove</button>
         </div>
         
         <div class="basket-footer">
-          <button @click="$router.push('/')">Continue Shopping</button>
-          <button @click="placeOrder" :disabled="ordering">
+          <button type="button" class="neutral" @click="$router.push('/')">Continue Shopping</button>
+          <button type="button" class="good" @click="placeOrder" :disabled="ordering">
             {{ ordering ? 'Placing Order...' : 'Place Order' }}
           </button>
         </div>
@@ -128,7 +128,7 @@ const placeOrder = async () => {
   error.value = null
 
   try {
-    // Place order for all items in basket
+    const groupId = crypto.randomUUID()
     const responses = []
     for (const item of basketItems.value) {
       const res = await client.orderDrink({
@@ -137,13 +137,12 @@ const placeOrder = async () => {
         addMilk: item.addMilk,
         sugarAmount: item.sugarAmount,
         milkAmount: item.milkAmount,
+        groupId,
       })
       responses.push(res)
     }
 
-    // Normalize responses (createdAt may be bigint; orderId may be under order_id)
     const orderIds = responses.map((r) => String(r?.orderId ?? r?.order_id ?? ''))
-    const groupId = orderIds[0] ?? `ck-${Date.now()}`
     const items = basketItems.value.map((item, i) => ({
       orderId: orderIds[i] ?? '',
       name: item.name,
@@ -154,23 +153,17 @@ const placeOrder = async () => {
       sugarType: item.sugarType,
     }))
 
-    addOrderGroup({
+    await addOrderGroup({
       groupId,
       orderIds,
       items,
-      status: 'preparing',
+      status: 'pending',
       createdAt: Date.now(),
     })
 
-    // Clear basket
     clearBasket()
     ordering.value = false
-
-    if (groupId) {
-      router.push({ name: 'OrderStatus', params: { orderId: groupId } })
-    } else {
-      router.push({ name: 'Orders' })
-    }
+    router.push({ name: 'OrderStatus', params: { orderId: groupId } })
   } catch (err) {
     error.value = `Failed to place order: ${err.message}`
     ordering.value = false

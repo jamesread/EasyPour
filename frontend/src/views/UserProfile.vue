@@ -3,7 +3,7 @@
     <section class="with-header-and-content profile-section">
       <div class="section-header">
         <h2>Profile</h2>
-        <button type="button" class="button" @click="$router.push('/')" aria-label="Back to menu">Back</button>
+        <button type="button" class="neutral" @click="$router.push('/')" aria-label="Back to menu">Back</button>
       </div>
       <div class="section-content padding">
         <div v-if="!username" class="profile-guest">
@@ -19,42 +19,79 @@
           </dl>
           <template v-if="isAdmin">
             <hr class="profile-divider" />
-            <label class="edit-mode-toggle">
-              <input v-model="editMode" type="checkbox" />
-              <span>Edit mode</span>
-            </label>
-            <p class="edit-mode-hint">When on, you can add, edit, and delete menu items on the Menu page.</p>
+            <FormField label="Edit mode" fake>
+              <RadioGroup
+                v-model="editMode"
+                name="edit-mode"
+                variant="boolean"
+                aria-label="Edit mode"
+                :options="editModeOptions"
+              />
+              <p class="edit-mode-hint">When on, you can add, edit, and delete menu items on the Menu page.</p>
+            </FormField>
           </template>
+          <div class="profile-logout">
+            <button type="button" class="neutral" @click="handleLogout">Log out</button>
+          </div>
         </template>
       </div>
     </section>
-    <section v-if="username" class="with-header-and-content profile-actions-section">
+    <section v-if="isAdmin" class="with-header-and-content admin-panel-section">
       <div class="section-header">
-        <h2>Actions</h2>
+        <h2>Admin Control Panel</h2>
       </div>
       <div class="section-content padding">
-        <div class="profile-actions-buttons">
-          <router-link v-if="isAdmin" to="/orders" class="button">Admin Control Panel</router-link>
-          <button type="button" class="button" @click="handleLogout">Log out</button>
-        </div>
+        <Navigation ref="adminNavigation">
+          <NavigationGrid compact />
+        </Navigation>
       </div>
     </section>
   </main>
 </template>
 
 <script setup>
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import FormField from 'picocrank/vue/components/FormField.vue'
+import RadioGroup from 'picocrank/vue/components/RadioGroup.vue'
+import Navigation from 'picocrank/vue/components/Navigation.vue'
+import NavigationGrid from 'picocrank/vue/components/NavigationGrid.vue'
 import { useCurrentUser } from '../composables/useCurrentUser'
 import { useEditMode } from '../composables/useEditMode'
 
 const router = useRouter()
 const { username, isAdmin, logout } = useCurrentUser()
 const { editMode } = useEditMode()
+const adminNavigation = ref(null)
+
+const editModeOptions = [
+  { label: 'On', value: true },
+  { label: 'Off', value: false },
+]
+
+async function setupAdminNavigation() {
+  await nextTick()
+  const nav = adminNavigation.value
+  if (!nav || !isAdmin.value) return
+  nav.clearNavigationLinks()
+  nav.addRouterLink('AdminOrders', 'Admin Orders', {
+    description: 'Acknowledge and manage all orders',
+  })
+  nav.addRouterLink('AdminKitchen', 'Kitchen View', {
+    description: 'Item counts from open orders',
+  })
+  nav.addRouterLink('AdminApprise', 'Apprise', {
+    description: 'Configure notifications for new orders',
+  })
+}
 
 async function handleLogout() {
   await logout()
   router.push('/')
 }
+
+watch([isAdmin, adminNavigation], () => setupAdminNavigation())
+onMounted(() => setupAdminNavigation())
 </script>
 
 <style scoped>
@@ -66,20 +103,10 @@ async function handleLogout() {
   gap: 1rem;
 }
 
-.profile-section {
+.profile-section,
+.admin-panel-section {
   width: 100%;
   max-width: 36rem;
-}
-
-.profile-actions-section {
-  width: 100%;
-  max-width: 36rem;
-}
-
-.profile-actions-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
 }
 
 .profile-guest {
@@ -108,21 +135,13 @@ async function handleLogout() {
   border-top: 1px solid var(--border-color);
 }
 
-.edit-mode-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  user-select: none;
-}
-
-.edit-mode-toggle input {
-  margin: 0;
-}
-
 .edit-mode-hint {
-  margin: 0.25rem 0 0.5rem;
+  margin: 0.5rem 0 0;
   font-size: 0.9rem;
   color: var(--karma-info-fg, #666);
+}
+
+.profile-logout {
+  margin-top: 1rem;
 }
 </style>

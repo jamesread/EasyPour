@@ -1,6 +1,6 @@
 <template>
-  <main class="menu-page">
-    <div class="menu-main">
+  <div class="menu-page">
+    <main class="menu-main">
       <div class="">
         <div v-if="loading" class="loading">Loading menu...</div>
         <div v-else-if="error" class="error">{{ error }}</div>
@@ -55,7 +55,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </main>
 
     <!-- Desktop: right sidebar -->
     <aside class="basket-sidebar" aria-label="Your order">
@@ -90,8 +90,8 @@
         </li>
       </ul>
       <div v-if="basketItems.length > 0" class="basket-preview-footer">
-        <button type="button" class="basket-preview-checkout" @click="$router.push('/basket')">
-          View basket ({{ basketItems.length }})
+        <button type="button" class="good" @click="$router.push('/basket')">
+          Checkout ({{ basketItems.length }})
         </button>
       </div>
     </aside>
@@ -101,7 +101,7 @@
       <button
         type="button"
         class="basket-drawer-toggle"
-        :class="{ 'has-items': basketItems.length > 0 }"
+        :class="{ good: basketItems.length > 0 }"
         :aria-expanded="basketDrawerOpen"
         aria-label="Open order"
         @click="basketDrawerOpen = !basketDrawerOpen"
@@ -146,13 +146,13 @@
         </li>
       </ul>
       <div v-if="basketItems.length > 0" class="basket-drawer-footer">
-        <button type="button" class="basket-preview-checkout" @click="$router.push('/basket'); basketDrawerOpen = false">
-          View basket ({{ basketItems.length }})
+        <button type="button" class="good" @click="$router.push('/basket'); basketDrawerOpen = false">
+          Checkout ({{ basketItems.length }})
         </button>
       </div>
     </div>
     </Teleport>
-  </main>
+  </div>
 
   <CustomizeItem
     :menu-item="selectedMenuItemForCustomize"
@@ -756,7 +756,8 @@ onMounted(async () => {
 .menu-page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
 }
 
 .menu-main {
@@ -768,6 +769,10 @@ onMounted(async () => {
 /* Override femtocrank's visibility: hidden so the sidebar is visible */
 .basket-sidebar {
   visibility: visible;
+  left: auto;
+  position: relative;
+  height: auto;
+  margin: 0;
   border-left: 2px solid #94a3b8;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
@@ -942,47 +947,21 @@ onMounted(async () => {
   border-top: 1px solid #e2e8f0;
 }
 
-.basket-preview-checkout {
+.basket-preview-footer button,
+.basket-drawer-footer button {
   width: 100%;
-  padding: 0.65rem 1rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #fff;
-  background: #0f172a;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-}
-
-.basket-preview-checkout:hover {
-  background: #1e293b;
 }
 
 /* Mobile: bottom drawer (teleported to body so position:fixed is viewport-relative) */
 .basket-drawer-toggle {
-  display: sticky;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   position: fixed;
   bottom: 2em;
   left: 1em;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #0f172a;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 999px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-  cursor: pointer;
   z-index: 40;
-}
-
-.basket-drawer-toggle.has-items {
-  background: #0f172a;
-  color: #fff;
-  border-color: #0f172a;
 }
 
 .basket-drawer-toggle-icon {
@@ -991,14 +970,14 @@ onMounted(async () => {
 }
 
 .basket-drawer-toggle-count {
-  background: rgba(255, 255, 255, 0.25);
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
   font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.08);
 }
 
-.basket-drawer-toggle.has-items .basket-drawer-toggle-count {
-  background: rgba(255, 255, 255, 0.3);
+.basket-drawer-toggle.good .basket-drawer-toggle-count {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .basket-drawer-backdrop {
@@ -1088,11 +1067,5 @@ onMounted(async () => {
   padding: 1rem 1.25rem;
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
   border-top: 1px solid #e2e8f0;
-}
-
-@media (min-width: 768px) {
-  .basket-drawer-toggle {
-    display: none;
-  }
 }
 </style>

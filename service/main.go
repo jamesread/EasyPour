@@ -27,9 +27,11 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"easypour/service/buildinfo"
+	"easypour/service/internal/apprise"
 	"easypour/service/internal/config"
 	"easypour/service/internal/menu"
 	"easypour/service/internal/order"
+	"easypour/service/internal/settings"
 	easypourv1 "easypour/service/gen/easypour/v1"
 	"easypour/service/gen/easypour/v1/easypourv1connect"
 )
@@ -131,10 +133,13 @@ type EasyPourServer struct {
 	authCtx        *auth.AuthShimContext
 	menuStore      *menu.Store
 	orderStore     *order.Store
+	settingsStore  *settings.Store
 	webhooks       []config.Webhook
 	webhookClient  *http.Client // skips TLS cert verification for webhook POSTs
 	oauthProviders []*easypourv1.OAuthProvider // configured OAuth2 providers for login form
 	sseBroadcast   *sseBroadcaster
+	appriseMu      sync.Mutex
+	appriseTimers  map[string]*time.Timer // debounce Apprise notify per order group
 }
 
 // Init returns app version and configured OAuth2 providers. Callable unauthenticated.
@@ -241,6 +246,10 @@ func (s *EasyPourServer) OrderDrink(
 
 	orderID := uuid.New().String()
 	username := s.getUsernameFromContext(ctx)
+	groupID := orderReq.GetGroupId()
+	if groupID == "" {
+		groupID = orderID
+	}
 
 	o := &order.Order{
 		ID:          orderID,
@@ -251,6 +260,7 @@ func (s *EasyPourServer) OrderDrink(
 		SugarAmount: orderReq.SugarAmount,
 		MilkAmount:  orderReq.MilkAmount,
 		Status:      "pending",
+		GroupID:     groupID,
 	}
 	if err := s.orderStore.Create(o); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create order: %w", err))
@@ -265,10 +275,22 @@ func (s *EasyPourServer) OrderDrink(
 		MilkAmount:  o.MilkAmount,
 		Status:      o.Status,
 		CreatedAt:   o.CreatedAt,
+		GroupId:     o.GroupID,
 	}
 
 	logrus.Infof("Order received: %s - item %s (Sugar: %v, Milk: %v)",
 		orderID, orderReq.MenuItemId, orderReq.AddSugar, orderReq.AddMilk)
+
+	itemName := orderReq.MenuItemId
+	if menuItems, err := s.menuStore.Load(); err == nil {
+		for _, it := range menuItems {
+			if it.Id == orderReq.MenuItemId {
+				itemName = it.Name
+				break
+			}
+		}
+	}
+	orderString := formatWebhookItemString(itemName, orderReq.AddSugar, orderReq.AddMilk, orderReq.SugarAmount, orderReq.MilkAmount)
 
 	// Send order details to configured webhooks (fire-and-forget, with retries)
 	nWebhooks := 0
@@ -279,15 +301,6 @@ func (s *EasyPourServer) OrderDrink(
 	}
 	if nWebhooks > 0 {
 		logrus.Infof("Sending order %s to %d webhook(s)", orderID, nWebhooks)
-		itemName := orderReq.MenuItemId
-		if menuItems, err := s.menuStore.Load(); err == nil {
-			for _, it := range menuItems {
-				if it.Id == orderReq.MenuItemId {
-					itemName = it.Name
-					break
-				}
-			}
-		}
 		wi := webhookItem{
 			MenuItemId:  orderReq.MenuItemId,
 			Name:        itemName,
@@ -296,7 +309,6 @@ func (s *EasyPourServer) OrderDrink(
 			SugarAmount: orderReq.SugarAmount,
 			MilkAmount:  orderReq.MilkAmount,
 		}
-		orderString := formatWebhookItemString(itemName, orderReq.AddSugar, orderReq.AddMilk, orderReq.SugarAmount, orderReq.MilkAmount)
 		payload := orderWebhookPayload{
 			OrderId:     orderID,
 			Status:      "pending",
@@ -317,6 +329,8 @@ func (s *EasyPourServer) OrderDrink(
 			}()
 		}
 	}
+
+	s.scheduleAppriseGroupNotify(groupID, username)
 
 	return connect.NewResponse(response), nil
 }
@@ -356,6 +370,184 @@ func (s *EasyPourServer) postWebhookWithRetry(url string, body []byte) {
 		lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 	logrus.Warnf("Webhook %s failed after %d attempts: %v", url, webhookMaxRetries, lastErr)
+}
+
+// scheduleAppriseGroupNotify coalesces notifications for a multi-item basket into one message.
+func (s *EasyPourServer) scheduleAppriseGroupNotify(groupID, username string) {
+	if groupID == "" || s.settingsStore == nil {
+		return
+	}
+	s.appriseMu.Lock()
+	defer s.appriseMu.Unlock()
+	if s.appriseTimers == nil {
+		s.appriseTimers = make(map[string]*time.Timer)
+	}
+	if existing, ok := s.appriseTimers[groupID]; ok {
+		existing.Stop()
+	}
+	s.appriseTimers[groupID] = time.AfterFunc(appriseGroupSettle, func() {
+		s.appriseMu.Lock()
+		delete(s.appriseTimers, groupID)
+		s.appriseMu.Unlock()
+		s.sendAppriseGroupNotify(groupID, username)
+	})
+}
+
+const appriseGroupSettle = 500 * time.Millisecond
+
+// sendAppriseGroupNotify loads all items in the group and sends a single Apprise notification.
+func (s *EasyPourServer) sendAppriseGroupNotify(groupID, username string) {
+	cfg, err := s.settingsStore.Get()
+	if err != nil || cfg == nil || cfg.AppriseURL == "" {
+		if err != nil {
+			logrus.Warnf("Load settings for Apprise: %v", err)
+		}
+		return
+	}
+	members, err := s.orderStore.ListByGroupID(groupID)
+	if err != nil {
+		logrus.Warnf("List order group %s for Apprise: %v", groupID, err)
+		return
+	}
+	if len(members) == 0 {
+		return
+	}
+	nameByID := s.menuNameByID()
+	descriptions := make([]string, 0, len(members))
+	for _, o := range members {
+		name := o.MenuItemID
+		if n, ok := nameByID[o.MenuItemID]; ok && n != "" {
+			name = n
+		}
+		descriptions = append(descriptions, formatWebhookItemString(name, o.AddSugar, o.AddMilk, o.SugarAmount, o.MilkAmount))
+	}
+	if username == "" {
+		username = members[0].Username
+	}
+	payload := apprise.Payload{
+		Title: "New EasyPour order",
+		Body:  apprise.FormatOrderBody(groupID, descriptions, username),
+		Type:  "info",
+	}
+	url := cfg.AppriseURL
+	go func() {
+		if err := apprise.Notify(s.webhookClient, url, payload); err != nil {
+			logrus.Warnf("Apprise notify for order group %s: %v", groupID, err)
+		}
+	}()
+}
+
+func (s *EasyPourServer) menuNameByID() map[string]string {
+	out := map[string]string{}
+	if s.menuStore == nil {
+		return out
+	}
+	items, err := s.menuStore.Load()
+	if err != nil {
+		return out
+	}
+	for _, it := range items {
+		if it != nil && it.Id != "" {
+			out[it.Id] = it.Name
+		}
+	}
+	return out
+}
+
+// GetSettings returns runtime settings (admin only).
+func (s *EasyPourServer) GetSettings(
+	ctx context.Context,
+	req *connect.Request[easypourv1.GetSettingsRequest],
+) (*connect.Response[easypourv1.GetSettingsResponse], error) {
+	if _, err := s.requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+	if s.settingsStore == nil {
+		return connect.NewResponse(&easypourv1.GetSettingsResponse{
+			Settings: &easypourv1.Settings{},
+		}), nil
+	}
+	cfg, err := s.settingsStore.Get()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get settings: %w", err))
+	}
+	return connect.NewResponse(&easypourv1.GetSettingsResponse{
+		Settings: &easypourv1.Settings{AppriseUrl: cfg.AppriseURL},
+	}), nil
+}
+
+// UpdateSettings updates runtime settings (admin only).
+func (s *EasyPourServer) UpdateSettings(
+	ctx context.Context,
+	req *connect.Request[easypourv1.UpdateSettingsRequest],
+) (*connect.Response[easypourv1.UpdateSettingsResponse], error) {
+	if _, err := s.requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+	if s.settingsStore == nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("settings store unavailable"))
+	}
+	msg := req.Msg.GetSettings()
+	if msg == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("settings required"))
+	}
+	in := &settings.Settings{AppriseURL: msg.GetAppriseUrl()}
+	if err := s.settingsStore.Update(in); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update settings: %w", err))
+	}
+	cfg, err := s.settingsStore.Get()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get settings: %w", err))
+	}
+	return connect.NewResponse(&easypourv1.UpdateSettingsResponse{
+		Settings: &easypourv1.Settings{AppriseUrl: cfg.AppriseURL},
+	}), nil
+}
+
+// TestAppriseNotification sends a test notification to the Apprise API (admin only).
+func (s *EasyPourServer) TestAppriseNotification(
+	ctx context.Context,
+	req *connect.Request[easypourv1.TestAppriseNotificationRequest],
+) (*connect.Response[easypourv1.TestAppriseNotificationResponse], error) {
+	if _, err := s.requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+	url := strings.TrimSpace(req.Msg.GetAppriseUrl())
+	if url == "" {
+		resolved, err := s.savedAppriseURL()
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get settings: %w", err))
+		}
+		url = resolved
+	}
+	if url == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("apprise URL required"))
+	}
+	payload := apprise.Payload{
+		Title: "EasyPour test notification",
+		Body:  "This is a test notification from EasyPour.",
+		Type:  "info",
+	}
+	if err := apprise.Notify(s.webhookClient, url, payload); err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("apprise notify failed: %w", err))
+	}
+	return connect.NewResponse(&easypourv1.TestAppriseNotificationResponse{
+		Message: "Test notification sent.",
+	}), nil
+}
+
+func (s *EasyPourServer) savedAppriseURL() (string, error) {
+	if s.settingsStore == nil {
+		return "", nil
+	}
+	cfg, err := s.settingsStore.Get()
+	if err != nil {
+		return "", err
+	}
+	if cfg == nil {
+		return "", nil
+	}
+	return strings.TrimSpace(cfg.AppriseURL), nil
 }
 
 // GetCurrentUser returns the authenticated user when auth is enabled (including is_admin for "admin" group),
@@ -931,6 +1123,16 @@ func main() {
 		logrus.Fatalf("Init order store: %v", err)
 	}
 
+	settingsDBPath := settings.GetSettingsDBPath(cfgPath)
+	settingsStore, err := settings.NewStore(settingsDBPath)
+	if err != nil {
+		logrus.Fatalf("Open settings store: %v", err)
+	}
+	defer settingsStore.Close()
+	if err := settingsStore.Init(); err != nil {
+		logrus.Fatalf("Init settings store: %v", err)
+	}
+
 	sseBroadcast := newSSEBroadcaster()
 
 	webhookClient := &http.Client{
@@ -953,6 +1155,7 @@ func main() {
 		authCtx:        authCtx,
 		menuStore:      menuStore,
 		orderStore:     orderStore,
+		settingsStore:  settingsStore,
 		webhooks:       appCfg.Webhooks,
 		webhookClient:  webhookClient,
 		oauthProviders: oauthProviders,

@@ -13,6 +13,7 @@ message OrderRequest {
   bool add_milk = 3;
   int32 sugar_amount = 4; // Optional: number of sugar packets/spoons
   int32 milk_amount = 5;  // Optional: amount of milk (percentage or ml)
+  string group_id = 6;    // Optional: shared id for multi-item basket orders; empty = order_id
 }
 
 // OrderResponse represents the response after placing an order (used for OrderDrink creation).
@@ -25,6 +26,7 @@ message OrderResponse {
   int32 milk_amount = 6;
   string status = 7; // e.g., "pending", "preparing", "delivered"
   int64 created_at = 8; // Unix timestamp
+  string group_id = 9;  // shared id for multi-item basket orders
 }
 
 // Order is a persisted order (includes username for ownership). Used by GetOrder, ListOrders, UpdateOrderStatus.
@@ -39,6 +41,7 @@ message Order {
   string status = 8;   // "pending", "preparing", "delivered"
   int64 created_at = 9;
   int64 updated_at = 10;
+  string group_id = 11; // shared id for multi-item basket orders
 }
 
 // GetOrderRequest requests a single order by id. Requires auth; returns own order or admin sees any.
@@ -132,6 +135,42 @@ message GetCurrentUserResponse {
   repeated OAuthProvider oauth_providers = 4;
 }
 
+// Settings holds runtime-configurable application settings (admin only).
+message Settings {
+  // Apprise API notify URL, e.g. http://localhost:8000/notify/ or http://localhost:8000/notify/mytag.
+  // When set, EasyPour POSTs title/body JSON to this URL on each new order.
+  string apprise_url = 1;
+}
+
+// GetSettingsRequest fetches current settings. Admin only.
+message GetSettingsRequest {}
+
+// GetSettingsResponse returns the current settings.
+message GetSettingsResponse {
+  Settings settings = 1;
+}
+
+// UpdateSettingsRequest updates settings. Admin only.
+message UpdateSettingsRequest {
+  Settings settings = 1;
+}
+
+// UpdateSettingsResponse returns the saved settings.
+message UpdateSettingsResponse {
+  Settings settings = 1;
+}
+
+// TestAppriseNotificationRequest sends a test notification via Apprise. Admin only.
+// If apprise_url is set, that URL is used; otherwise the saved settings URL is used.
+message TestAppriseNotificationRequest {
+  string apprise_url = 1;
+}
+
+// TestAppriseNotificationResponse confirms the test notification was sent.
+message TestAppriseNotificationResponse {
+  string message = 1;
+}
+
 // EasyPourService provides methods for the menu and orders
 service EasyPourService {
   // Init returns app version and configured OAuth2 providers. Callable unauthenticated on load.
@@ -163,4 +202,13 @@ service EasyPourService {
 
   // UpdateOrderStatus updates an order's status. Requires auth; admin can set preparing/delivered, user can set delivered for own orders.
   rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse) {}
+
+  // GetSettings returns runtime settings (admin only).
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse) {}
+
+  // UpdateSettings updates runtime settings (admin only).
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse) {}
+
+  // TestAppriseNotification sends a test Apprise notification (admin only).
+  rpc TestAppriseNotification(TestAppriseNotificationRequest) returns (TestAppriseNotificationResponse) {}
 }

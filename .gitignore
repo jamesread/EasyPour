@@ -21,6 +21,7 @@ go.work.sum
 service/tmp/
 service/images/
 service/orders.db
+service/settings.db
 
 # Environment
 .env
