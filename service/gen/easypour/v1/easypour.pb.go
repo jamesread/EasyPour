@@ -921,6 +921,43 @@ func (x *DeleteMenuItemRequest) GetId() string {
 	return ""
 }
 
+// Features holds SPA-facing feature flags projected from cvars.
+type Features struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Features) Reset() {
+	*x = Features{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Features) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Features) ProtoMessage() {}
+
+func (x *Features) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Features.ProtoReflect.Descriptor instead.
+func (*Features) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{15}
+}
+
 // InitRequest is a request for app bootstrap data (version, OAuth providers).
 type InitRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -930,7 +967,7 @@ type InitRequest struct {
 
 func (x *InitRequest) Reset() {
 	*x = InitRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[15]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -942,7 +979,7 @@ func (x *InitRequest) String() string {
 func (*InitRequest) ProtoMessage() {}
 
 func (x *InitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[15]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -955,21 +992,23 @@ func (x *InitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitRequest.ProtoReflect.Descriptor instead.
 func (*InitRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{15}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{16}
 }
 
-// InitResponse returns app version and configured OAuth2 providers for the login form.
+// InitResponse returns app version, site title, features, and OAuth2 providers for the login form.
 type InitResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Version        string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
 	OauthProviders []*OAuthProvider       `protobuf:"bytes,2,rep,name=oauth_providers,json=oauthProviders,proto3" json:"oauth_providers,omitempty"`
+	SiteTitle      string                 `protobuf:"bytes,3,opt,name=site_title,json=siteTitle,proto3" json:"site_title,omitempty"`
+	Features       *Features              `protobuf:"bytes,4,opt,name=features,proto3" json:"features,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *InitResponse) Reset() {
 	*x = InitResponse{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[16]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -981,7 +1020,7 @@ func (x *InitResponse) String() string {
 func (*InitResponse) ProtoMessage() {}
 
 func (x *InitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[16]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -994,7 +1033,7 @@ func (x *InitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitResponse.ProtoReflect.Descriptor instead.
 func (*InitResponse) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{16}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *InitResponse) GetVersion() string {
@@ -1011,6 +1050,264 @@ func (x *InitResponse) GetOauthProviders() []*OAuthProvider {
 	return nil
 }
 
+func (x *InitResponse) GetSiteTitle() string {
+	if x != nil {
+		return x.SiteTitle
+	}
+	return ""
+}
+
+func (x *InitResponse) GetFeatures() *Features {
+	if x != nil {
+		return x.Features
+	}
+	return nil
+}
+
+// Cvar is a database-backed configuration variable (admin Settings).
+type Cvar struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	MainType      string                 `protobuf:"bytes,2,opt,name=main_type,json=mainType,proto3" json:"main_type,omitempty"`
+	ValueInt      int32                  `protobuf:"varint,3,opt,name=value_int,json=valueInt,proto3" json:"value_int,omitempty"`
+	ValueString   string                 `protobuf:"bytes,4,opt,name=value_string,json=valueString,proto3" json:"value_string,omitempty"`
+	Title         string                 `protobuf:"bytes,5,opt,name=title,proto3" json:"title,omitempty"`
+	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	Category      string                 `protobuf:"bytes,7,opt,name=category,proto3" json:"category,omitempty"`
+	Ordinal       int32                  `protobuf:"varint,8,opt,name=ordinal,proto3" json:"ordinal,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Cvar) Reset() {
+	*x = Cvar{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Cvar) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Cvar) ProtoMessage() {}
+
+func (x *Cvar) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Cvar.ProtoReflect.Descriptor instead.
+func (*Cvar) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *Cvar) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *Cvar) GetMainType() string {
+	if x != nil {
+		return x.MainType
+	}
+	return ""
+}
+
+func (x *Cvar) GetValueInt() int32 {
+	if x != nil {
+		return x.ValueInt
+	}
+	return 0
+}
+
+func (x *Cvar) GetValueString() string {
+	if x != nil {
+		return x.ValueString
+	}
+	return ""
+}
+
+func (x *Cvar) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Cvar) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Cvar) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *Cvar) GetOrdinal() int32 {
+	if x != nil {
+		return x.Ordinal
+	}
+	return 0
+}
+
+// ListCvarsRequest lists all configuration variables. Admin only.
+type ListCvarsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCvarsRequest) Reset() {
+	*x = ListCvarsRequest{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCvarsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCvarsRequest) ProtoMessage() {}
+
+func (x *ListCvarsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCvarsRequest.ProtoReflect.Descriptor instead.
+func (*ListCvarsRequest) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{19}
+}
+
+// ListCvarsResponse returns cvars ordered by ordinal then key.
+type ListCvarsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cvars         []*Cvar                `protobuf:"bytes,1,rep,name=cvars,proto3" json:"cvars,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCvarsResponse) Reset() {
+	*x = ListCvarsResponse{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCvarsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCvarsResponse) ProtoMessage() {}
+
+func (x *ListCvarsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCvarsResponse.ProtoReflect.Descriptor instead.
+func (*ListCvarsResponse) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ListCvarsResponse) GetCvars() []*Cvar {
+	if x != nil {
+		return x.Cvars
+	}
+	return nil
+}
+
+// UpdateCvarRequest updates only the value of a cvar. Admin only; metadata is read-only.
+type UpdateCvarRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	ValueInt      int32                  `protobuf:"varint,2,opt,name=value_int,json=valueInt,proto3" json:"value_int,omitempty"`
+	ValueString   string                 `protobuf:"bytes,3,opt,name=value_string,json=valueString,proto3" json:"value_string,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateCvarRequest) Reset() {
+	*x = UpdateCvarRequest{}
+	mi := &file_easypour_v1_easypour_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCvarRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCvarRequest) ProtoMessage() {}
+
+func (x *UpdateCvarRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_easypour_v1_easypour_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCvarRequest.ProtoReflect.Descriptor instead.
+func (*UpdateCvarRequest) Descriptor() ([]byte, []int) {
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *UpdateCvarRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *UpdateCvarRequest) GetValueInt() int32 {
+	if x != nil {
+		return x.ValueInt
+	}
+	return 0
+}
+
+func (x *UpdateCvarRequest) GetValueString() string {
+	if x != nil {
+		return x.ValueString
+	}
+	return ""
+}
+
 // GetCurrentUserRequest is a request for the current user (when auth is enabled)
 type GetCurrentUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1020,7 +1317,7 @@ type GetCurrentUserRequest struct {
 
 func (x *GetCurrentUserRequest) Reset() {
 	*x = GetCurrentUserRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[17]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1032,7 +1329,7 @@ func (x *GetCurrentUserRequest) String() string {
 func (*GetCurrentUserRequest) ProtoMessage() {}
 
 func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[17]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1045,7 +1342,7 @@ func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentUserRequest.ProtoReflect.Descriptor instead.
 func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{17}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{22}
 }
 
 // OAuthProvider describes a configured OAuth2 login provider for the login form
@@ -1060,7 +1357,7 @@ type OAuthProvider struct {
 
 func (x *OAuthProvider) Reset() {
 	*x = OAuthProvider{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[18]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1072,7 +1369,7 @@ func (x *OAuthProvider) String() string {
 func (*OAuthProvider) ProtoMessage() {}
 
 func (x *OAuthProvider) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[18]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1085,7 +1382,7 @@ func (x *OAuthProvider) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OAuthProvider.ProtoReflect.Descriptor instead.
 func (*OAuthProvider) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{18}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *OAuthProvider) GetId() string {
@@ -1123,7 +1420,7 @@ type GetCurrentUserResponse struct {
 
 func (x *GetCurrentUserResponse) Reset() {
 	*x = GetCurrentUserResponse{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[19]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1135,7 +1432,7 @@ func (x *GetCurrentUserResponse) String() string {
 func (*GetCurrentUserResponse) ProtoMessage() {}
 
 func (x *GetCurrentUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[19]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1148,7 +1445,7 @@ func (x *GetCurrentUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentUserResponse.ProtoReflect.Descriptor instead.
 func (*GetCurrentUserResponse) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{19}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetCurrentUserResponse) GetIsAuthenticated() bool {
@@ -1191,7 +1488,7 @@ type Settings struct {
 
 func (x *Settings) Reset() {
 	*x = Settings{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[20]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1203,7 +1500,7 @@ func (x *Settings) String() string {
 func (*Settings) ProtoMessage() {}
 
 func (x *Settings) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[20]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1216,7 +1513,7 @@ func (x *Settings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Settings.ProtoReflect.Descriptor instead.
 func (*Settings) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{20}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *Settings) GetAppriseUrl() string {
@@ -1235,7 +1532,7 @@ type GetSettingsRequest struct {
 
 func (x *GetSettingsRequest) Reset() {
 	*x = GetSettingsRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[21]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1247,7 +1544,7 @@ func (x *GetSettingsRequest) String() string {
 func (*GetSettingsRequest) ProtoMessage() {}
 
 func (x *GetSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[21]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1260,7 +1557,7 @@ func (x *GetSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSettingsRequest.ProtoReflect.Descriptor instead.
 func (*GetSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{21}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{26}
 }
 
 // GetSettingsResponse returns the current settings.
@@ -1273,7 +1570,7 @@ type GetSettingsResponse struct {
 
 func (x *GetSettingsResponse) Reset() {
 	*x = GetSettingsResponse{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[22]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1285,7 +1582,7 @@ func (x *GetSettingsResponse) String() string {
 func (*GetSettingsResponse) ProtoMessage() {}
 
 func (x *GetSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[22]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1298,7 +1595,7 @@ func (x *GetSettingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSettingsResponse.ProtoReflect.Descriptor instead.
 func (*GetSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{22}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetSettingsResponse) GetSettings() *Settings {
@@ -1318,7 +1615,7 @@ type UpdateSettingsRequest struct {
 
 func (x *UpdateSettingsRequest) Reset() {
 	*x = UpdateSettingsRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[23]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1330,7 +1627,7 @@ func (x *UpdateSettingsRequest) String() string {
 func (*UpdateSettingsRequest) ProtoMessage() {}
 
 func (x *UpdateSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[23]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1343,7 +1640,7 @@ func (x *UpdateSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSettingsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{23}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *UpdateSettingsRequest) GetSettings() *Settings {
@@ -1363,7 +1660,7 @@ type UpdateSettingsResponse struct {
 
 func (x *UpdateSettingsResponse) Reset() {
 	*x = UpdateSettingsResponse{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[24]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1375,7 +1672,7 @@ func (x *UpdateSettingsResponse) String() string {
 func (*UpdateSettingsResponse) ProtoMessage() {}
 
 func (x *UpdateSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[24]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1388,7 +1685,7 @@ func (x *UpdateSettingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSettingsResponse.ProtoReflect.Descriptor instead.
 func (*UpdateSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{24}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *UpdateSettingsResponse) GetSettings() *Settings {
@@ -1409,7 +1706,7 @@ type TestAppriseNotificationRequest struct {
 
 func (x *TestAppriseNotificationRequest) Reset() {
 	*x = TestAppriseNotificationRequest{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[25]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1421,7 +1718,7 @@ func (x *TestAppriseNotificationRequest) String() string {
 func (*TestAppriseNotificationRequest) ProtoMessage() {}
 
 func (x *TestAppriseNotificationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[25]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1434,7 +1731,7 @@ func (x *TestAppriseNotificationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestAppriseNotificationRequest.ProtoReflect.Descriptor instead.
 func (*TestAppriseNotificationRequest) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{25}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *TestAppriseNotificationRequest) GetAppriseUrl() string {
@@ -1454,7 +1751,7 @@ type TestAppriseNotificationResponse struct {
 
 func (x *TestAppriseNotificationResponse) Reset() {
 	*x = TestAppriseNotificationResponse{}
-	mi := &file_easypour_v1_easypour_proto_msgTypes[26]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1466,7 +1763,7 @@ func (x *TestAppriseNotificationResponse) String() string {
 func (*TestAppriseNotificationResponse) ProtoMessage() {}
 
 func (x *TestAppriseNotificationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_easypour_v1_easypour_proto_msgTypes[26]
+	mi := &file_easypour_v1_easypour_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1479,7 +1776,7 @@ func (x *TestAppriseNotificationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestAppriseNotificationResponse.ProtoReflect.Descriptor instead.
 func (*TestAppriseNotificationResponse) Descriptor() ([]byte, []int) {
-	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{26}
+	return file_easypour_v1_easypour_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *TestAppriseNotificationResponse) GetMessage() string {
@@ -1561,11 +1858,32 @@ const file_easypour_v1_easypour_proto_rawDesc = "" +
 	"\x15UpdateMenuItemRequest\x12)\n" +
 	"\x04item\x18\x01 \x01(\v2\x15.easypour.v1.MenuItemR\x04item\"'\n" +
 	"\x15DeleteMenuItemRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\r\n" +
-	"\vInitRequest\"m\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\n" +
+	"\n" +
+	"\bFeatures\"\r\n" +
+	"\vInitRequest\"\xbf\x01\n" +
 	"\fInitResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12C\n" +
-	"\x0foauth_providers\x18\x02 \x03(\v2\x1a.easypour.v1.OAuthProviderR\x0eoauthProviders\"\x17\n" +
+	"\x0foauth_providers\x18\x02 \x03(\v2\x1a.easypour.v1.OAuthProviderR\x0eoauthProviders\x12\x1d\n" +
+	"\n" +
+	"site_title\x18\x03 \x01(\tR\tsiteTitle\x121\n" +
+	"\bfeatures\x18\x04 \x01(\v2\x15.easypour.v1.FeaturesR\bfeatures\"\xe3\x01\n" +
+	"\x04Cvar\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1b\n" +
+	"\tmain_type\x18\x02 \x01(\tR\bmainType\x12\x1b\n" +
+	"\tvalue_int\x18\x03 \x01(\x05R\bvalueInt\x12!\n" +
+	"\fvalue_string\x18\x04 \x01(\tR\vvalueString\x12\x14\n" +
+	"\x05title\x18\x05 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12\x1a\n" +
+	"\bcategory\x18\a \x01(\tR\bcategory\x12\x18\n" +
+	"\aordinal\x18\b \x01(\x05R\aordinal\"\x12\n" +
+	"\x10ListCvarsRequest\"<\n" +
+	"\x11ListCvarsResponse\x12'\n" +
+	"\x05cvars\x18\x01 \x03(\v2\x11.easypour.v1.CvarR\x05cvars\"e\n" +
+	"\x11UpdateCvarRequest\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1b\n" +
+	"\tvalue_int\x18\x02 \x01(\x05R\bvalueInt\x12!\n" +
+	"\fvalue_string\x18\x03 \x01(\tR\vvalueString\"\x17\n" +
 	"\x15GetCurrentUserRequest\"N\n" +
 	"\rOAuthProvider\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -1590,7 +1908,7 @@ const file_easypour_v1_easypour_proto_rawDesc = "" +
 	"\vapprise_url\x18\x01 \x01(\tR\n" +
 	"appriseUrl\";\n" +
 	"\x1fTestAppriseNotificationResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\xd5\b\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\xe6\t\n" +
 	"\x0fEasyPourService\x12=\n" +
 	"\x04Init\x12\x18.easypour.v1.InitRequest\x1a\x19.easypour.v1.InitResponse\"\x00\x12F\n" +
 	"\aGetMenu\x12\x1b.easypour.v1.GetMenuRequest\x1a\x1c.easypour.v1.GetMenuResponse\"\x00\x12E\n" +
@@ -1605,7 +1923,10 @@ const file_easypour_v1_easypour_proto_rawDesc = "" +
 	"ListOrders\x12\x1e.easypour.v1.ListOrdersRequest\x1a\x1f.easypour.v1.ListOrdersResponse\"\x00\x12d\n" +
 	"\x11UpdateOrderStatus\x12%.easypour.v1.UpdateOrderStatusRequest\x1a&.easypour.v1.UpdateOrderStatusResponse\"\x00\x12R\n" +
 	"\vGetSettings\x12\x1f.easypour.v1.GetSettingsRequest\x1a .easypour.v1.GetSettingsResponse\"\x00\x12[\n" +
-	"\x0eUpdateSettings\x12\".easypour.v1.UpdateSettingsRequest\x1a#.easypour.v1.UpdateSettingsResponse\"\x00\x12v\n" +
+	"\x0eUpdateSettings\x12\".easypour.v1.UpdateSettingsRequest\x1a#.easypour.v1.UpdateSettingsResponse\"\x00\x12L\n" +
+	"\tListCvars\x12\x1d.easypour.v1.ListCvarsRequest\x1a\x1e.easypour.v1.ListCvarsResponse\"\x00\x12A\n" +
+	"\n" +
+	"UpdateCvar\x12\x1e.easypour.v1.UpdateCvarRequest\x1a\x11.easypour.v1.Cvar\"\x00\x12v\n" +
 	"\x17TestAppriseNotification\x12+.easypour.v1.TestAppriseNotificationRequest\x1a,.easypour.v1.TestAppriseNotificationResponse\"\x00B-Z+easypour/service/gen/easypour/v1;easypourv1b\x06proto3"
 
 var (
@@ -1620,7 +1941,7 @@ func file_easypour_v1_easypour_proto_rawDescGZIP() []byte {
 	return file_easypour_v1_easypour_proto_rawDescData
 }
 
-var file_easypour_v1_easypour_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_easypour_v1_easypour_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_easypour_v1_easypour_proto_goTypes = []any{
 	(*OrderRequest)(nil),                    // 0: easypour.v1.OrderRequest
 	(*OrderResponse)(nil),                   // 1: easypour.v1.OrderResponse
@@ -1637,19 +1958,24 @@ var file_easypour_v1_easypour_proto_goTypes = []any{
 	(*CreateMenuItemRequest)(nil),           // 12: easypour.v1.CreateMenuItemRequest
 	(*UpdateMenuItemRequest)(nil),           // 13: easypour.v1.UpdateMenuItemRequest
 	(*DeleteMenuItemRequest)(nil),           // 14: easypour.v1.DeleteMenuItemRequest
-	(*InitRequest)(nil),                     // 15: easypour.v1.InitRequest
-	(*InitResponse)(nil),                    // 16: easypour.v1.InitResponse
-	(*GetCurrentUserRequest)(nil),           // 17: easypour.v1.GetCurrentUserRequest
-	(*OAuthProvider)(nil),                   // 18: easypour.v1.OAuthProvider
-	(*GetCurrentUserResponse)(nil),          // 19: easypour.v1.GetCurrentUserResponse
-	(*Settings)(nil),                        // 20: easypour.v1.Settings
-	(*GetSettingsRequest)(nil),              // 21: easypour.v1.GetSettingsRequest
-	(*GetSettingsResponse)(nil),             // 22: easypour.v1.GetSettingsResponse
-	(*UpdateSettingsRequest)(nil),           // 23: easypour.v1.UpdateSettingsRequest
-	(*UpdateSettingsResponse)(nil),          // 24: easypour.v1.UpdateSettingsResponse
-	(*TestAppriseNotificationRequest)(nil),  // 25: easypour.v1.TestAppriseNotificationRequest
-	(*TestAppriseNotificationResponse)(nil), // 26: easypour.v1.TestAppriseNotificationResponse
-	(*emptypb.Empty)(nil),                   // 27: google.protobuf.Empty
+	(*Features)(nil),                        // 15: easypour.v1.Features
+	(*InitRequest)(nil),                     // 16: easypour.v1.InitRequest
+	(*InitResponse)(nil),                    // 17: easypour.v1.InitResponse
+	(*Cvar)(nil),                            // 18: easypour.v1.Cvar
+	(*ListCvarsRequest)(nil),                // 19: easypour.v1.ListCvarsRequest
+	(*ListCvarsResponse)(nil),               // 20: easypour.v1.ListCvarsResponse
+	(*UpdateCvarRequest)(nil),               // 21: easypour.v1.UpdateCvarRequest
+	(*GetCurrentUserRequest)(nil),           // 22: easypour.v1.GetCurrentUserRequest
+	(*OAuthProvider)(nil),                   // 23: easypour.v1.OAuthProvider
+	(*GetCurrentUserResponse)(nil),          // 24: easypour.v1.GetCurrentUserResponse
+	(*Settings)(nil),                        // 25: easypour.v1.Settings
+	(*GetSettingsRequest)(nil),              // 26: easypour.v1.GetSettingsRequest
+	(*GetSettingsResponse)(nil),             // 27: easypour.v1.GetSettingsResponse
+	(*UpdateSettingsRequest)(nil),           // 28: easypour.v1.UpdateSettingsRequest
+	(*UpdateSettingsResponse)(nil),          // 29: easypour.v1.UpdateSettingsResponse
+	(*TestAppriseNotificationRequest)(nil),  // 30: easypour.v1.TestAppriseNotificationRequest
+	(*TestAppriseNotificationResponse)(nil), // 31: easypour.v1.TestAppriseNotificationResponse
+	(*emptypb.Empty)(nil),                   // 32: google.protobuf.Empty
 }
 var file_easypour_v1_easypour_proto_depIdxs = []int32{
 	2,  // 0: easypour.v1.GetOrderResponse.order:type_name -> easypour.v1.Order
@@ -1658,42 +1984,48 @@ var file_easypour_v1_easypour_proto_depIdxs = []int32{
 	9,  // 3: easypour.v1.GetMenuResponse.items:type_name -> easypour.v1.MenuItem
 	9,  // 4: easypour.v1.CreateMenuItemRequest.item:type_name -> easypour.v1.MenuItem
 	9,  // 5: easypour.v1.UpdateMenuItemRequest.item:type_name -> easypour.v1.MenuItem
-	18, // 6: easypour.v1.InitResponse.oauth_providers:type_name -> easypour.v1.OAuthProvider
-	18, // 7: easypour.v1.GetCurrentUserResponse.oauth_providers:type_name -> easypour.v1.OAuthProvider
-	20, // 8: easypour.v1.GetSettingsResponse.settings:type_name -> easypour.v1.Settings
-	20, // 9: easypour.v1.UpdateSettingsRequest.settings:type_name -> easypour.v1.Settings
-	20, // 10: easypour.v1.UpdateSettingsResponse.settings:type_name -> easypour.v1.Settings
-	15, // 11: easypour.v1.EasyPourService.Init:input_type -> easypour.v1.InitRequest
-	10, // 12: easypour.v1.EasyPourService.GetMenu:input_type -> easypour.v1.GetMenuRequest
-	0,  // 13: easypour.v1.EasyPourService.OrderDrink:input_type -> easypour.v1.OrderRequest
-	17, // 14: easypour.v1.EasyPourService.GetCurrentUser:input_type -> easypour.v1.GetCurrentUserRequest
-	12, // 15: easypour.v1.EasyPourService.CreateMenuItem:input_type -> easypour.v1.CreateMenuItemRequest
-	13, // 16: easypour.v1.EasyPourService.UpdateMenuItem:input_type -> easypour.v1.UpdateMenuItemRequest
-	14, // 17: easypour.v1.EasyPourService.DeleteMenuItem:input_type -> easypour.v1.DeleteMenuItemRequest
-	3,  // 18: easypour.v1.EasyPourService.GetOrder:input_type -> easypour.v1.GetOrderRequest
-	5,  // 19: easypour.v1.EasyPourService.ListOrders:input_type -> easypour.v1.ListOrdersRequest
-	7,  // 20: easypour.v1.EasyPourService.UpdateOrderStatus:input_type -> easypour.v1.UpdateOrderStatusRequest
-	21, // 21: easypour.v1.EasyPourService.GetSettings:input_type -> easypour.v1.GetSettingsRequest
-	23, // 22: easypour.v1.EasyPourService.UpdateSettings:input_type -> easypour.v1.UpdateSettingsRequest
-	25, // 23: easypour.v1.EasyPourService.TestAppriseNotification:input_type -> easypour.v1.TestAppriseNotificationRequest
-	16, // 24: easypour.v1.EasyPourService.Init:output_type -> easypour.v1.InitResponse
-	11, // 25: easypour.v1.EasyPourService.GetMenu:output_type -> easypour.v1.GetMenuResponse
-	1,  // 26: easypour.v1.EasyPourService.OrderDrink:output_type -> easypour.v1.OrderResponse
-	19, // 27: easypour.v1.EasyPourService.GetCurrentUser:output_type -> easypour.v1.GetCurrentUserResponse
-	9,  // 28: easypour.v1.EasyPourService.CreateMenuItem:output_type -> easypour.v1.MenuItem
-	9,  // 29: easypour.v1.EasyPourService.UpdateMenuItem:output_type -> easypour.v1.MenuItem
-	27, // 30: easypour.v1.EasyPourService.DeleteMenuItem:output_type -> google.protobuf.Empty
-	4,  // 31: easypour.v1.EasyPourService.GetOrder:output_type -> easypour.v1.GetOrderResponse
-	6,  // 32: easypour.v1.EasyPourService.ListOrders:output_type -> easypour.v1.ListOrdersResponse
-	8,  // 33: easypour.v1.EasyPourService.UpdateOrderStatus:output_type -> easypour.v1.UpdateOrderStatusResponse
-	22, // 34: easypour.v1.EasyPourService.GetSettings:output_type -> easypour.v1.GetSettingsResponse
-	24, // 35: easypour.v1.EasyPourService.UpdateSettings:output_type -> easypour.v1.UpdateSettingsResponse
-	26, // 36: easypour.v1.EasyPourService.TestAppriseNotification:output_type -> easypour.v1.TestAppriseNotificationResponse
-	24, // [24:37] is the sub-list for method output_type
-	11, // [11:24] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	23, // 6: easypour.v1.InitResponse.oauth_providers:type_name -> easypour.v1.OAuthProvider
+	15, // 7: easypour.v1.InitResponse.features:type_name -> easypour.v1.Features
+	18, // 8: easypour.v1.ListCvarsResponse.cvars:type_name -> easypour.v1.Cvar
+	23, // 9: easypour.v1.GetCurrentUserResponse.oauth_providers:type_name -> easypour.v1.OAuthProvider
+	25, // 10: easypour.v1.GetSettingsResponse.settings:type_name -> easypour.v1.Settings
+	25, // 11: easypour.v1.UpdateSettingsRequest.settings:type_name -> easypour.v1.Settings
+	25, // 12: easypour.v1.UpdateSettingsResponse.settings:type_name -> easypour.v1.Settings
+	16, // 13: easypour.v1.EasyPourService.Init:input_type -> easypour.v1.InitRequest
+	10, // 14: easypour.v1.EasyPourService.GetMenu:input_type -> easypour.v1.GetMenuRequest
+	0,  // 15: easypour.v1.EasyPourService.OrderDrink:input_type -> easypour.v1.OrderRequest
+	22, // 16: easypour.v1.EasyPourService.GetCurrentUser:input_type -> easypour.v1.GetCurrentUserRequest
+	12, // 17: easypour.v1.EasyPourService.CreateMenuItem:input_type -> easypour.v1.CreateMenuItemRequest
+	13, // 18: easypour.v1.EasyPourService.UpdateMenuItem:input_type -> easypour.v1.UpdateMenuItemRequest
+	14, // 19: easypour.v1.EasyPourService.DeleteMenuItem:input_type -> easypour.v1.DeleteMenuItemRequest
+	3,  // 20: easypour.v1.EasyPourService.GetOrder:input_type -> easypour.v1.GetOrderRequest
+	5,  // 21: easypour.v1.EasyPourService.ListOrders:input_type -> easypour.v1.ListOrdersRequest
+	7,  // 22: easypour.v1.EasyPourService.UpdateOrderStatus:input_type -> easypour.v1.UpdateOrderStatusRequest
+	26, // 23: easypour.v1.EasyPourService.GetSettings:input_type -> easypour.v1.GetSettingsRequest
+	28, // 24: easypour.v1.EasyPourService.UpdateSettings:input_type -> easypour.v1.UpdateSettingsRequest
+	19, // 25: easypour.v1.EasyPourService.ListCvars:input_type -> easypour.v1.ListCvarsRequest
+	21, // 26: easypour.v1.EasyPourService.UpdateCvar:input_type -> easypour.v1.UpdateCvarRequest
+	30, // 27: easypour.v1.EasyPourService.TestAppriseNotification:input_type -> easypour.v1.TestAppriseNotificationRequest
+	17, // 28: easypour.v1.EasyPourService.Init:output_type -> easypour.v1.InitResponse
+	11, // 29: easypour.v1.EasyPourService.GetMenu:output_type -> easypour.v1.GetMenuResponse
+	1,  // 30: easypour.v1.EasyPourService.OrderDrink:output_type -> easypour.v1.OrderResponse
+	24, // 31: easypour.v1.EasyPourService.GetCurrentUser:output_type -> easypour.v1.GetCurrentUserResponse
+	9,  // 32: easypour.v1.EasyPourService.CreateMenuItem:output_type -> easypour.v1.MenuItem
+	9,  // 33: easypour.v1.EasyPourService.UpdateMenuItem:output_type -> easypour.v1.MenuItem
+	32, // 34: easypour.v1.EasyPourService.DeleteMenuItem:output_type -> google.protobuf.Empty
+	4,  // 35: easypour.v1.EasyPourService.GetOrder:output_type -> easypour.v1.GetOrderResponse
+	6,  // 36: easypour.v1.EasyPourService.ListOrders:output_type -> easypour.v1.ListOrdersResponse
+	8,  // 37: easypour.v1.EasyPourService.UpdateOrderStatus:output_type -> easypour.v1.UpdateOrderStatusResponse
+	27, // 38: easypour.v1.EasyPourService.GetSettings:output_type -> easypour.v1.GetSettingsResponse
+	29, // 39: easypour.v1.EasyPourService.UpdateSettings:output_type -> easypour.v1.UpdateSettingsResponse
+	20, // 40: easypour.v1.EasyPourService.ListCvars:output_type -> easypour.v1.ListCvarsResponse
+	18, // 41: easypour.v1.EasyPourService.UpdateCvar:output_type -> easypour.v1.Cvar
+	31, // 42: easypour.v1.EasyPourService.TestAppriseNotification:output_type -> easypour.v1.TestAppriseNotificationResponse
+	28, // [28:43] is the sub-list for method output_type
+	13, // [13:28] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_easypour_v1_easypour_proto_init() }
@@ -1707,7 +2039,7 @@ func file_easypour_v1_easypour_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_easypour_v1_easypour_proto_rawDesc), len(file_easypour_v1_easypour_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -32,7 +32,9 @@ volumes:
 
 Run with `docker compose up -d`. To use a host directory for config instead of a named volume, replace the volume with e.g. `- ./config:/config`.
 
-Config and menu live in `/config` (config.yaml and menu.yaml). Use a named volume `-v easypour-config:/config` to persist and edit them, or bind-mount a host dir: `-v /path/to/your/config:/config`.
+Config (`config.yaml`) and SQLite data (`easypour.db`) live in `/config`. Schema migrations run on container start via sql-migrate. An optional `menu.yaml` in that directory is imported once when the menu table is empty (first boot seed). Use a named volume `-v easypour-config:/config` to persist them, or bind-mount a host dir: `-v /path/to/your/config:/config`.
+
+Older installs that used separate `menu.db`, `orders.db`, and `settings.db` files are migrated into `easypour.db` automatically on startup (existing rows are preserved; legacy files are left in place unused).
 
 The API is available at `http://localhost:9654`. For the full web UI, run the frontend locally (see [Development](#development) below).
 

@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file easypour/v1/easypour.proto.
  */
 export const file_easypour_v1_easypour: GenFile = /*@__PURE__*/
-  fileDesc("ChplYXN5cG91ci92MS9lYXN5cG91ci5wcm90bxILZWFzeXBvdXIudjEihgEKDE9yZGVyUmVxdWVzdBIUCgxtZW51X2l0ZW1faWQYASABKAkSEQoJYWRkX3N1Z2FyGAIgASgIEhAKCGFkZF9taWxrGAMgASgIEhQKDHN1Z2FyX2Ftb3VudBgEIAEoBRITCgttaWxrX2Ftb3VudBgFIAEoBRIQCghncm91cF9pZBgGIAEoCSK9AQoNT3JkZXJSZXNwb25zZRIQCghvcmRlcl9pZBgBIAEoCRIUCgxtZW51X2l0ZW1faWQYAiABKAkSEQoJYWRkX3N1Z2FyGAMgASgIEhAKCGFkZF9taWxrGAQgASgIEhQKDHN1Z2FyX2Ftb3VudBgFIAEoBRITCgttaWxrX2Ftb3VudBgGIAEoBRIOCgZzdGF0dXMYByABKAkSEgoKY3JlYXRlZF9hdBgIIAEoAxIQCghncm91cF9pZBgJIAEoCSLbAQoFT3JkZXISEAoIb3JkZXJfaWQYASABKAkSFAoMbWVudV9pdGVtX2lkGAIgASgJEhAKCHVzZXJuYW1lGAMgASgJEhEKCWFkZF9zdWdhchgEIAEoCBIQCghhZGRfbWlsaxgFIAEoCBIUCgxzdWdhcl9hbW91bnQYBiABKAUSEwoLbWlsa19hbW91bnQYByABKAUSDgoGc3RhdHVzGAggASgJEhIKCmNyZWF0ZWRfYXQYCSABKAMSEgoKdXBkYXRlZF9hdBgKIAEoAxIQCghncm91cF9pZBgLIAEoCSIjCg9HZXRPcmRlclJlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkiNQoQR2V0T3JkZXJSZXNwb25zZRIhCgVvcmRlchgBIAEoCzISLmVhc3lwb3VyLnYxLk9yZGVyIhMKEUxpc3RPcmRlcnNSZXF1ZXN0IjgKEkxpc3RPcmRlcnNSZXNwb25zZRIiCgZvcmRlcnMYASADKAsyEi5lYXN5cG91ci52MS5PcmRlciI8ChhVcGRhdGVPcmRlclN0YXR1c1JlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkSDgoGc3RhdHVzGAIgASgJIj4KGVVwZGF0ZU9yZGVyU3RhdHVzUmVzcG9uc2USIQoFb3JkZXIYASABKAsyEi5lYXN5cG91ci52MS5PcmRlciKNAQoITWVudUl0ZW0SCgoCaWQYBiABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIWCg5zdXBwb3J0c19zdWdhchgEIAEoCBIVCg1zdXBwb3J0c19taWxrGAUgASgIEhEKCWltYWdlX3VybBgHIAEoCRIQCghjYXRlZ29yeRgIIAEoCSIQCg5HZXRNZW51UmVxdWVzdCI3Cg9HZXRNZW51UmVzcG9uc2USJAoFaXRlbXMYASADKAsyFS5lYXN5cG91ci52MS5NZW51SXRlbSI8ChVDcmVhdGVNZW51SXRlbVJlcXVlc3QSIwoEaXRlbRgBIAEoCzIVLmVhc3lwb3VyLnYxLk1lbnVJdGVtIjwKFVVwZGF0ZU1lbnVJdGVtUmVxdWVzdBIjCgRpdGVtGAEgASgLMhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iIwoVRGVsZXRlTWVudUl0ZW1SZXF1ZXN0EgoKAmlkGAEgASgJIg0KC0luaXRSZXF1ZXN0IlQKDEluaXRSZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEjMKD29hdXRoX3Byb3ZpZGVycxgCIAMoCzIaLmVhc3lwb3VyLnYxLk9BdXRoUHJvdmlkZXIiFwoVR2V0Q3VycmVudFVzZXJSZXF1ZXN0IjsKDU9BdXRoUHJvdmlkZXISCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIQCghhdXRoX3VybBgDIAEoCSKLAQoWR2V0Q3VycmVudFVzZXJSZXNwb25zZRIYChBpc19hdXRoZW50aWNhdGVkGAEgASgIEhAKCHVzZXJuYW1lGAIgASgJEhAKCGlzX2FkbWluGAMgASgIEjMKD29hdXRoX3Byb3ZpZGVycxgEIAMoCzIaLmVhc3lwb3VyLnYxLk9BdXRoUHJvdmlkZXIiHwoIU2V0dGluZ3MSEwoLYXBwcmlzZV91cmwYASABKAkiFAoSR2V0U2V0dGluZ3NSZXF1ZXN0Ij4KE0dldFNldHRpbmdzUmVzcG9uc2USJwoIc2V0dGluZ3MYASABKAsyFS5lYXN5cG91ci52MS5TZXR0aW5ncyJAChVVcGRhdGVTZXR0aW5nc1JlcXVlc3QSJwoIc2V0dGluZ3MYASABKAsyFS5lYXN5cG91ci52MS5TZXR0aW5ncyJBChZVcGRhdGVTZXR0aW5nc1Jlc3BvbnNlEicKCHNldHRpbmdzGAEgASgLMhUuZWFzeXBvdXIudjEuU2V0dGluZ3MiNQoeVGVzdEFwcHJpc2VOb3RpZmljYXRpb25SZXF1ZXN0EhMKC2FwcHJpc2VfdXJsGAEgASgJIjIKH1Rlc3RBcHByaXNlTm90aWZpY2F0aW9uUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCTLVCAoPRWFzeVBvdXJTZXJ2aWNlEj0KBEluaXQSGC5lYXN5cG91ci52MS5Jbml0UmVxdWVzdBoZLmVhc3lwb3VyLnYxLkluaXRSZXNwb25zZSIAEkYKB0dldE1lbnUSGy5lYXN5cG91ci52MS5HZXRNZW51UmVxdWVzdBocLmVhc3lwb3VyLnYxLkdldE1lbnVSZXNwb25zZSIAEkUKCk9yZGVyRHJpbmsSGS5lYXN5cG91ci52MS5PcmRlclJlcXVlc3QaGi5lYXN5cG91ci52MS5PcmRlclJlc3BvbnNlIgASWwoOR2V0Q3VycmVudFVzZXISIi5lYXN5cG91ci52MS5HZXRDdXJyZW50VXNlclJlcXVlc3QaIy5lYXN5cG91ci52MS5HZXRDdXJyZW50VXNlclJlc3BvbnNlIgASTQoOQ3JlYXRlTWVudUl0ZW0SIi5lYXN5cG91ci52MS5DcmVhdGVNZW51SXRlbVJlcXVlc3QaFS5lYXN5cG91ci52MS5NZW51SXRlbSIAEk0KDlVwZGF0ZU1lbnVJdGVtEiIuZWFzeXBvdXIudjEuVXBkYXRlTWVudUl0ZW1SZXF1ZXN0GhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iABJOCg5EZWxldGVNZW51SXRlbRIiLmVhc3lwb3VyLnYxLkRlbGV0ZU1lbnVJdGVtUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIAEkkKCEdldE9yZGVyEhwuZWFzeXBvdXIudjEuR2V0T3JkZXJSZXF1ZXN0Gh0uZWFzeXBvdXIudjEuR2V0T3JkZXJSZXNwb25zZSIAEk8KCkxpc3RPcmRlcnMSHi5lYXN5cG91ci52MS5MaXN0T3JkZXJzUmVxdWVzdBofLmVhc3lwb3VyLnYxLkxpc3RPcmRlcnNSZXNwb25zZSIAEmQKEVVwZGF0ZU9yZGVyU3RhdHVzEiUuZWFzeXBvdXIudjEuVXBkYXRlT3JkZXJTdGF0dXNSZXF1ZXN0GiYuZWFzeXBvdXIudjEuVXBkYXRlT3JkZXJTdGF0dXNSZXNwb25zZSIAElIKC0dldFNldHRpbmdzEh8uZWFzeXBvdXIudjEuR2V0U2V0dGluZ3NSZXF1ZXN0GiAuZWFzeXBvdXIudjEuR2V0U2V0dGluZ3NSZXNwb25zZSIAElsKDlVwZGF0ZVNldHRpbmdzEiIuZWFzeXBvdXIudjEuVXBkYXRlU2V0dGluZ3NSZXF1ZXN0GiMuZWFzeXBvdXIudjEuVXBkYXRlU2V0dGluZ3NSZXNwb25zZSIAEnYKF1Rlc3RBcHByaXNlTm90aWZpY2F0aW9uEisuZWFzeXBvdXIudjEuVGVzdEFwcHJpc2VOb3RpZmljYXRpb25SZXF1ZXN0GiwuZWFzeXBvdXIudjEuVGVzdEFwcHJpc2VOb3RpZmljYXRpb25SZXNwb25zZSIAQi1aK2Vhc3lwb3VyL3NlcnZpY2UvZ2VuL2Vhc3lwb3VyL3YxO2Vhc3lwb3VydjFiBnByb3RvMw", [file_google_protobuf_empty]);
+  fileDesc("ChplYXN5cG91ci92MS9lYXN5cG91ci5wcm90bxILZWFzeXBvdXIudjEihgEKDE9yZGVyUmVxdWVzdBIUCgxtZW51X2l0ZW1faWQYASABKAkSEQoJYWRkX3N1Z2FyGAIgASgIEhAKCGFkZF9taWxrGAMgASgIEhQKDHN1Z2FyX2Ftb3VudBgEIAEoBRITCgttaWxrX2Ftb3VudBgFIAEoBRIQCghncm91cF9pZBgGIAEoCSK9AQoNT3JkZXJSZXNwb25zZRIQCghvcmRlcl9pZBgBIAEoCRIUCgxtZW51X2l0ZW1faWQYAiABKAkSEQoJYWRkX3N1Z2FyGAMgASgIEhAKCGFkZF9taWxrGAQgASgIEhQKDHN1Z2FyX2Ftb3VudBgFIAEoBRITCgttaWxrX2Ftb3VudBgGIAEoBRIOCgZzdGF0dXMYByABKAkSEgoKY3JlYXRlZF9hdBgIIAEoAxIQCghncm91cF9pZBgJIAEoCSLbAQoFT3JkZXISEAoIb3JkZXJfaWQYASABKAkSFAoMbWVudV9pdGVtX2lkGAIgASgJEhAKCHVzZXJuYW1lGAMgASgJEhEKCWFkZF9zdWdhchgEIAEoCBIQCghhZGRfbWlsaxgFIAEoCBIUCgxzdWdhcl9hbW91bnQYBiABKAUSEwoLbWlsa19hbW91bnQYByABKAUSDgoGc3RhdHVzGAggASgJEhIKCmNyZWF0ZWRfYXQYCSABKAMSEgoKdXBkYXRlZF9hdBgKIAEoAxIQCghncm91cF9pZBgLIAEoCSIjCg9HZXRPcmRlclJlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkiNQoQR2V0T3JkZXJSZXNwb25zZRIhCgVvcmRlchgBIAEoCzISLmVhc3lwb3VyLnYxLk9yZGVyIhMKEUxpc3RPcmRlcnNSZXF1ZXN0IjgKEkxpc3RPcmRlcnNSZXNwb25zZRIiCgZvcmRlcnMYASADKAsyEi5lYXN5cG91ci52MS5PcmRlciI8ChhVcGRhdGVPcmRlclN0YXR1c1JlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkSDgoGc3RhdHVzGAIgASgJIj4KGVVwZGF0ZU9yZGVyU3RhdHVzUmVzcG9uc2USIQoFb3JkZXIYASABKAsyEi5lYXN5cG91ci52MS5PcmRlciKNAQoITWVudUl0ZW0SCgoCaWQYBiABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIWCg5zdXBwb3J0c19zdWdhchgEIAEoCBIVCg1zdXBwb3J0c19taWxrGAUgASgIEhEKCWltYWdlX3VybBgHIAEoCRIQCghjYXRlZ29yeRgIIAEoCSIQCg5HZXRNZW51UmVxdWVzdCI3Cg9HZXRNZW51UmVzcG9uc2USJAoFaXRlbXMYASADKAsyFS5lYXN5cG91ci52MS5NZW51SXRlbSI8ChVDcmVhdGVNZW51SXRlbVJlcXVlc3QSIwoEaXRlbRgBIAEoCzIVLmVhc3lwb3VyLnYxLk1lbnVJdGVtIjwKFVVwZGF0ZU1lbnVJdGVtUmVxdWVzdBIjCgRpdGVtGAEgASgLMhUuZWFzeXBvdXIudjEuTWVudUl0ZW0iIwoVRGVsZXRlTWVudUl0ZW1SZXF1ZXN0EgoKAmlkGAEgASgJIgoKCEZlYXR1cmVzIg0KC0luaXRSZXF1ZXN0IpEBCgxJbml0UmVzcG9uc2USDwoHdmVyc2lvbhgBIAEoCRIzCg9vYXV0aF9wcm92aWRlcnMYAiADKAsyGi5lYXN5cG91ci52MS5PQXV0aFByb3ZpZGVyEhIKCnNpdGVfdGl0bGUYAyABKAkSJwoIZmVhdHVyZXMYBCABKAsyFS5lYXN5cG91ci52MS5GZWF0dXJlcyKWAQoEQ3ZhchILCgNrZXkYASABKAkSEQoJbWFpbl90eXBlGAIgASgJEhEKCXZhbHVlX2ludBgDIAEoBRIUCgx2YWx1ZV9zdHJpbmcYBCABKAkSDQoFdGl0bGUYBSABKAkSEwoLZGVzY3JpcHRpb24YBiABKAkSEAoIY2F0ZWdvcnkYByABKAkSDwoHb3JkaW5hbBgIIAEoBSISChBMaXN0Q3ZhcnNSZXF1ZXN0IjUKEUxpc3RDdmFyc1Jlc3BvbnNlEiAKBWN2YXJzGAEgAygLMhEuZWFzeXBvdXIudjEuQ3ZhciJJChFVcGRhdGVDdmFyUmVxdWVzdBILCgNrZXkYASABKAkSEQoJdmFsdWVfaW50GAIgASgFEhQKDHZhbHVlX3N0cmluZxgDIAEoCSIXChVHZXRDdXJyZW50VXNlclJlcXVlc3QiOwoNT0F1dGhQcm92aWRlchIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhAKCGF1dGhfdXJsGAMgASgJIosBChZHZXRDdXJyZW50VXNlclJlc3BvbnNlEhgKEGlzX2F1dGhlbnRpY2F0ZWQYASABKAgSEAoIdXNlcm5hbWUYAiABKAkSEAoIaXNfYWRtaW4YAyABKAgSMwoPb2F1dGhfcHJvdmlkZXJzGAQgAygLMhouZWFzeXBvdXIudjEuT0F1dGhQcm92aWRlciIfCghTZXR0aW5ncxITCgthcHByaXNlX3VybBgBIAEoCSIUChJHZXRTZXR0aW5nc1JlcXVlc3QiPgoTR2V0U2V0dGluZ3NSZXNwb25zZRInCghzZXR0aW5ncxgBIAEoCzIVLmVhc3lwb3VyLnYxLlNldHRpbmdzIkAKFVVwZGF0ZVNldHRpbmdzUmVxdWVzdBInCghzZXR0aW5ncxgBIAEoCzIVLmVhc3lwb3VyLnYxLlNldHRpbmdzIkEKFlVwZGF0ZVNldHRpbmdzUmVzcG9uc2USJwoIc2V0dGluZ3MYASABKAsyFS5lYXN5cG91ci52MS5TZXR0aW5ncyI1Ch5UZXN0QXBwcmlzZU5vdGlmaWNhdGlvblJlcXVlc3QSEwoLYXBwcmlzZV91cmwYASABKAkiMgofVGVzdEFwcHJpc2VOb3RpZmljYXRpb25SZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJMuYJCg9FYXN5UG91clNlcnZpY2USPQoESW5pdBIYLmVhc3lwb3VyLnYxLkluaXRSZXF1ZXN0GhkuZWFzeXBvdXIudjEuSW5pdFJlc3BvbnNlIgASRgoHR2V0TWVudRIbLmVhc3lwb3VyLnYxLkdldE1lbnVSZXF1ZXN0GhwuZWFzeXBvdXIudjEuR2V0TWVudVJlc3BvbnNlIgASRQoKT3JkZXJEcmluaxIZLmVhc3lwb3VyLnYxLk9yZGVyUmVxdWVzdBoaLmVhc3lwb3VyLnYxLk9yZGVyUmVzcG9uc2UiABJbCg5HZXRDdXJyZW50VXNlchIiLmVhc3lwb3VyLnYxLkdldEN1cnJlbnRVc2VyUmVxdWVzdBojLmVhc3lwb3VyLnYxLkdldEN1cnJlbnRVc2VyUmVzcG9uc2UiABJNCg5DcmVhdGVNZW51SXRlbRIiLmVhc3lwb3VyLnYxLkNyZWF0ZU1lbnVJdGVtUmVxdWVzdBoVLmVhc3lwb3VyLnYxLk1lbnVJdGVtIgASTQoOVXBkYXRlTWVudUl0ZW0SIi5lYXN5cG91ci52MS5VcGRhdGVNZW51SXRlbVJlcXVlc3QaFS5lYXN5cG91ci52MS5NZW51SXRlbSIAEk4KDkRlbGV0ZU1lbnVJdGVtEiIuZWFzeXBvdXIudjEuRGVsZXRlTWVudUl0ZW1SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5IgASSQoIR2V0T3JkZXISHC5lYXN5cG91ci52MS5HZXRPcmRlclJlcXVlc3QaHS5lYXN5cG91ci52MS5HZXRPcmRlclJlc3BvbnNlIgASTwoKTGlzdE9yZGVycxIeLmVhc3lwb3VyLnYxLkxpc3RPcmRlcnNSZXF1ZXN0Gh8uZWFzeXBvdXIudjEuTGlzdE9yZGVyc1Jlc3BvbnNlIgASZAoRVXBkYXRlT3JkZXJTdGF0dXMSJS5lYXN5cG91ci52MS5VcGRhdGVPcmRlclN0YXR1c1JlcXVlc3QaJi5lYXN5cG91ci52MS5VcGRhdGVPcmRlclN0YXR1c1Jlc3BvbnNlIgASUgoLR2V0U2V0dGluZ3MSHy5lYXN5cG91ci52MS5HZXRTZXR0aW5nc1JlcXVlc3QaIC5lYXN5cG91ci52MS5HZXRTZXR0aW5nc1Jlc3BvbnNlIgASWwoOVXBkYXRlU2V0dGluZ3MSIi5lYXN5cG91ci52MS5VcGRhdGVTZXR0aW5nc1JlcXVlc3QaIy5lYXN5cG91ci52MS5VcGRhdGVTZXR0aW5nc1Jlc3BvbnNlIgASTAoJTGlzdEN2YXJzEh0uZWFzeXBvdXIudjEuTGlzdEN2YXJzUmVxdWVzdBoeLmVhc3lwb3VyLnYxLkxpc3RDdmFyc1Jlc3BvbnNlIgASQQoKVXBkYXRlQ3ZhchIeLmVhc3lwb3VyLnYxLlVwZGF0ZUN2YXJSZXF1ZXN0GhEuZWFzeXBvdXIudjEuQ3ZhciIAEnYKF1Rlc3RBcHByaXNlTm90aWZpY2F0aW9uEisuZWFzeXBvdXIudjEuVGVzdEFwcHJpc2VOb3RpZmljYXRpb25SZXF1ZXN0GiwuZWFzeXBvdXIudjEuVGVzdEFwcHJpc2VOb3RpZmljYXRpb25SZXNwb25zZSIAQi1aK2Vhc3lwb3VyL3NlcnZpY2UvZ2VuL2Vhc3lwb3VyL3YxO2Vhc3lwb3VydjFiBnByb3RvMw", [file_google_protobuf_empty]);
 
 /**
  * OrderRequest represents a request to order a menu item (beverage or food)
@@ -476,6 +476,21 @@ export const DeleteMenuItemRequestSchema: GenMessage<DeleteMenuItemRequest> = /*
   messageDesc(file_easypour_v1_easypour, 14);
 
 /**
+ * Features holds SPA-facing feature flags projected from cvars.
+ *
+ * @generated from message easypour.v1.Features
+ */
+export type Features = Message<"easypour.v1.Features"> & {
+};
+
+/**
+ * Describes the message easypour.v1.Features.
+ * Use `create(FeaturesSchema)` to create a new message.
+ */
+export const FeaturesSchema: GenMessage<Features> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 15);
+
+/**
  * InitRequest is a request for app bootstrap data (version, OAuth providers).
  *
  * @generated from message easypour.v1.InitRequest
@@ -488,10 +503,10 @@ export type InitRequest = Message<"easypour.v1.InitRequest"> & {
  * Use `create(InitRequestSchema)` to create a new message.
  */
 export const InitRequestSchema: GenMessage<InitRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 15);
+  messageDesc(file_easypour_v1_easypour, 16);
 
 /**
- * InitResponse returns app version and configured OAuth2 providers for the login form.
+ * InitResponse returns app version, site title, features, and OAuth2 providers for the login form.
  *
  * @generated from message easypour.v1.InitResponse
  */
@@ -505,6 +520,16 @@ export type InitResponse = Message<"easypour.v1.InitResponse"> & {
    * @generated from field: repeated easypour.v1.OAuthProvider oauth_providers = 2;
    */
   oauthProviders: OAuthProvider[];
+
+  /**
+   * @generated from field: string site_title = 3;
+   */
+  siteTitle: string;
+
+  /**
+   * @generated from field: easypour.v1.Features features = 4;
+   */
+  features?: Features | undefined;
 };
 
 /**
@@ -512,7 +537,124 @@ export type InitResponse = Message<"easypour.v1.InitResponse"> & {
  * Use `create(InitResponseSchema)` to create a new message.
  */
 export const InitResponseSchema: GenMessage<InitResponse> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 16);
+  messageDesc(file_easypour_v1_easypour, 17);
+
+/**
+ * Cvar is a database-backed configuration variable (admin Settings).
+ *
+ * @generated from message easypour.v1.Cvar
+ */
+export type Cvar = Message<"easypour.v1.Cvar"> & {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * @generated from field: string main_type = 2;
+   */
+  mainType: string;
+
+  /**
+   * @generated from field: int32 value_int = 3;
+   */
+  valueInt: number;
+
+  /**
+   * @generated from field: string value_string = 4;
+   */
+  valueString: string;
+
+  /**
+   * @generated from field: string title = 5;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string description = 6;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string category = 7;
+   */
+  category: string;
+
+  /**
+   * @generated from field: int32 ordinal = 8;
+   */
+  ordinal: number;
+};
+
+/**
+ * Describes the message easypour.v1.Cvar.
+ * Use `create(CvarSchema)` to create a new message.
+ */
+export const CvarSchema: GenMessage<Cvar> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 18);
+
+/**
+ * ListCvarsRequest lists all configuration variables. Admin only.
+ *
+ * @generated from message easypour.v1.ListCvarsRequest
+ */
+export type ListCvarsRequest = Message<"easypour.v1.ListCvarsRequest"> & {
+};
+
+/**
+ * Describes the message easypour.v1.ListCvarsRequest.
+ * Use `create(ListCvarsRequestSchema)` to create a new message.
+ */
+export const ListCvarsRequestSchema: GenMessage<ListCvarsRequest> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 19);
+
+/**
+ * ListCvarsResponse returns cvars ordered by ordinal then key.
+ *
+ * @generated from message easypour.v1.ListCvarsResponse
+ */
+export type ListCvarsResponse = Message<"easypour.v1.ListCvarsResponse"> & {
+  /**
+   * @generated from field: repeated easypour.v1.Cvar cvars = 1;
+   */
+  cvars: Cvar[];
+};
+
+/**
+ * Describes the message easypour.v1.ListCvarsResponse.
+ * Use `create(ListCvarsResponseSchema)` to create a new message.
+ */
+export const ListCvarsResponseSchema: GenMessage<ListCvarsResponse> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 20);
+
+/**
+ * UpdateCvarRequest updates only the value of a cvar. Admin only; metadata is read-only.
+ *
+ * @generated from message easypour.v1.UpdateCvarRequest
+ */
+export type UpdateCvarRequest = Message<"easypour.v1.UpdateCvarRequest"> & {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * @generated from field: int32 value_int = 2;
+   */
+  valueInt: number;
+
+  /**
+   * @generated from field: string value_string = 3;
+   */
+  valueString: string;
+};
+
+/**
+ * Describes the message easypour.v1.UpdateCvarRequest.
+ * Use `create(UpdateCvarRequestSchema)` to create a new message.
+ */
+export const UpdateCvarRequestSchema: GenMessage<UpdateCvarRequest> = /*@__PURE__*/
+  messageDesc(file_easypour_v1_easypour, 21);
 
 /**
  * GetCurrentUserRequest is a request for the current user (when auth is enabled)
@@ -527,7 +669,7 @@ export type GetCurrentUserRequest = Message<"easypour.v1.GetCurrentUserRequest">
  * Use `create(GetCurrentUserRequestSchema)` to create a new message.
  */
 export const GetCurrentUserRequestSchema: GenMessage<GetCurrentUserRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 17);
+  messageDesc(file_easypour_v1_easypour, 22);
 
 /**
  * OAuthProvider describes a configured OAuth2 login provider for the login form
@@ -562,7 +704,7 @@ export type OAuthProvider = Message<"easypour.v1.OAuthProvider"> & {
  * Use `create(OAuthProviderSchema)` to create a new message.
  */
 export const OAuthProviderSchema: GenMessage<OAuthProvider> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 18);
+  messageDesc(file_easypour_v1_easypour, 23);
 
 /**
  * GetCurrentUserResponse returns the authenticated user when auth is enabled,
@@ -599,7 +741,7 @@ export type GetCurrentUserResponse = Message<"easypour.v1.GetCurrentUserResponse
  * Use `create(GetCurrentUserResponseSchema)` to create a new message.
  */
 export const GetCurrentUserResponseSchema: GenMessage<GetCurrentUserResponse> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 19);
+  messageDesc(file_easypour_v1_easypour, 24);
 
 /**
  * Settings holds runtime-configurable application settings (admin only).
@@ -621,7 +763,7 @@ export type Settings = Message<"easypour.v1.Settings"> & {
  * Use `create(SettingsSchema)` to create a new message.
  */
 export const SettingsSchema: GenMessage<Settings> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 20);
+  messageDesc(file_easypour_v1_easypour, 25);
 
 /**
  * GetSettingsRequest fetches current settings. Admin only.
@@ -636,7 +778,7 @@ export type GetSettingsRequest = Message<"easypour.v1.GetSettingsRequest"> & {
  * Use `create(GetSettingsRequestSchema)` to create a new message.
  */
 export const GetSettingsRequestSchema: GenMessage<GetSettingsRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 21);
+  messageDesc(file_easypour_v1_easypour, 26);
 
 /**
  * GetSettingsResponse returns the current settings.
@@ -655,7 +797,7 @@ export type GetSettingsResponse = Message<"easypour.v1.GetSettingsResponse"> & {
  * Use `create(GetSettingsResponseSchema)` to create a new message.
  */
 export const GetSettingsResponseSchema: GenMessage<GetSettingsResponse> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 22);
+  messageDesc(file_easypour_v1_easypour, 27);
 
 /**
  * UpdateSettingsRequest updates settings. Admin only.
@@ -674,7 +816,7 @@ export type UpdateSettingsRequest = Message<"easypour.v1.UpdateSettingsRequest">
  * Use `create(UpdateSettingsRequestSchema)` to create a new message.
  */
 export const UpdateSettingsRequestSchema: GenMessage<UpdateSettingsRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 23);
+  messageDesc(file_easypour_v1_easypour, 28);
 
 /**
  * UpdateSettingsResponse returns the saved settings.
@@ -693,7 +835,7 @@ export type UpdateSettingsResponse = Message<"easypour.v1.UpdateSettingsResponse
  * Use `create(UpdateSettingsResponseSchema)` to create a new message.
  */
 export const UpdateSettingsResponseSchema: GenMessage<UpdateSettingsResponse> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 24);
+  messageDesc(file_easypour_v1_easypour, 29);
 
 /**
  * TestAppriseNotificationRequest sends a test notification via Apprise. Admin only.
@@ -713,7 +855,7 @@ export type TestAppriseNotificationRequest = Message<"easypour.v1.TestAppriseNot
  * Use `create(TestAppriseNotificationRequestSchema)` to create a new message.
  */
 export const TestAppriseNotificationRequestSchema: GenMessage<TestAppriseNotificationRequest> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 25);
+  messageDesc(file_easypour_v1_easypour, 30);
 
 /**
  * TestAppriseNotificationResponse confirms the test notification was sent.
@@ -732,7 +874,7 @@ export type TestAppriseNotificationResponse = Message<"easypour.v1.TestAppriseNo
  * Use `create(TestAppriseNotificationResponseSchema)` to create a new message.
  */
 export const TestAppriseNotificationResponseSchema: GenMessage<TestAppriseNotificationResponse> = /*@__PURE__*/
-  messageDesc(file_easypour_v1_easypour, 26);
+  messageDesc(file_easypour_v1_easypour, 31);
 
 /**
  * EasyPourService provides methods for the menu and orders
@@ -859,6 +1001,26 @@ export const EasyPourService: GenService<{
     methodKind: "unary";
     input: typeof UpdateSettingsRequestSchema;
     output: typeof UpdateSettingsResponseSchema;
+  },
+  /**
+   * ListCvars returns configuration variables for the admin Settings page. Admin only.
+   *
+   * @generated from rpc easypour.v1.EasyPourService.ListCvars
+   */
+  listCvars: {
+    methodKind: "unary";
+    input: typeof ListCvarsRequestSchema;
+    output: typeof ListCvarsResponseSchema;
+  },
+  /**
+   * UpdateCvar updates a configuration variable value. Admin only.
+   *
+   * @generated from rpc easypour.v1.EasyPourService.UpdateCvar
+   */
+  updateCvar: {
+    methodKind: "unary";
+    input: typeof UpdateCvarRequestSchema;
+    output: typeof CvarSchema;
   },
   /**
    * TestAppriseNotification sends a test Apprise notification (admin only).

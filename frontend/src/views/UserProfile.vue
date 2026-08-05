@@ -80,8 +80,11 @@ async function setupAdminNavigation() {
   nav.addRouterLink('AdminKitchen', 'Kitchen View', {
     description: 'Item counts from open orders',
   })
+  nav.addRouterLink('SettingsAdmin', 'Settings', {
+    description: 'Site-wide configuration variables',
+  })
   nav.addRouterLink('AdminApprise', 'Apprise', {
-    description: 'Configure notifications for new orders',
+    description: 'Test Apprise notifications for new orders',
   })
 }
 

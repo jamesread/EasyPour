@@ -1,4 +1,4 @@
-.PHONY: all generate build test lint install setup dev-service dev-frontend service frontend integration-test
+.PHONY: all generate build test lint install setup migrate dev-service dev-frontend service frontend integration-test
 
 # Default: build project and all subdirectories
 all: build
@@ -18,6 +18,10 @@ service:
 frontend:
 	$(MAKE) -C frontend build
 
+# Apply SQLite migrations (set DB_PATH to the easypour.db file)
+migrate:
+	$(MAKE) -C database/sqlite
+
 # Run all tests
 test: generate
 	$(MAKE) -C service test
@@ -35,7 +39,7 @@ install:
 
 # Setup: install deps and generate protocol
 setup: install generate
-	@echo "Setup complete! Run 'make dev-service' in one terminal and 'make dev-frontend' in another."
+	@echo "Setup complete! Run 'make migrate' (with DB_PATH set), then 'make dev-service' and 'make dev-frontend'."
 
 # Run the Go service (development)
 dev-service:

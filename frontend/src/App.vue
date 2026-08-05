@@ -1,7 +1,7 @@
 <template>
   <Navigation ref="navigation">
     <Header
-      title="EasyPour"
+      :title="siteTitle"
       logo-url="/logo.svg"
       :username="displayUsername"
       :sidebar-enabled="false"
@@ -40,7 +40,7 @@ import { useInit } from './composables/useInit'
 const router = useRouter()
 const { basketItems } = useBasket()
 const { username, refresh } = useCurrentUser()
-const { version, oauthProviders } = useInit()
+const { version, siteTitle, oauthProviders } = useInit()
 const loginRef = ref(null)
 const navigation = ref(null)
 

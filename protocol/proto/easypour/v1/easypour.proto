@@ -107,13 +107,45 @@ message DeleteMenuItemRequest {
   string id = 1;
 }
 
+// Features holds SPA-facing feature flags projected from cvars.
+message Features {}
+
 // InitRequest is a request for app bootstrap data (version, OAuth providers).
 message InitRequest {}
 
-// InitResponse returns app version and configured OAuth2 providers for the login form.
+// InitResponse returns app version, site title, features, and OAuth2 providers for the login form.
 message InitResponse {
   string version = 1;
   repeated OAuthProvider oauth_providers = 2;
+  string site_title = 3;
+  Features features = 4;
+}
+
+// Cvar is a database-backed configuration variable (admin Settings).
+message Cvar {
+  string key = 1;
+  string main_type = 2;
+  int32 value_int = 3;
+  string value_string = 4;
+  string title = 5;
+  string description = 6;
+  string category = 7;
+  int32 ordinal = 8;
+}
+
+// ListCvarsRequest lists all configuration variables. Admin only.
+message ListCvarsRequest {}
+
+// ListCvarsResponse returns cvars ordered by ordinal then key.
+message ListCvarsResponse {
+  repeated Cvar cvars = 1;
+}
+
+// UpdateCvarRequest updates only the value of a cvar. Admin only; metadata is read-only.
+message UpdateCvarRequest {
+  string key = 1;
+  int32 value_int = 2;
+  string value_string = 3;
 }
 
 // GetCurrentUserRequest is a request for the current user (when auth is enabled)
@@ -208,6 +240,12 @@ service EasyPourService {
 
   // UpdateSettings updates runtime settings (admin only).
   rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse) {}
+
+  // ListCvars returns configuration variables for the admin Settings page. Admin only.
+  rpc ListCvars(ListCvarsRequest) returns (ListCvarsResponse) {}
+
+  // UpdateCvar updates a configuration variable value. Admin only.
+  rpc UpdateCvar(UpdateCvarRequest) returns (Cvar) {}
 
   // TestAppriseNotification sends a test Apprise notification (admin only).
   rpc TestAppriseNotification(TestAppriseNotificationRequest) returns (TestAppriseNotificationResponse) {}

@@ -3,12 +3,34 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/jamesread/httpauthshim/authpublic"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 )
+
+const defaultListenAddr = ":9654"
+
+// RequiredMigration is the sql-migrate id this binary expects to be applied.
+const RequiredMigration = "0.base.sql"
+
+// ListenAddr returns the bind address: $PORT if set, otherwise :9654.
+// PORT may be a bare port ("8080") or a full address (":8080" / "0.0.0.0:8080").
+func ListenAddr() string {
+	if port := strings.TrimSpace(os.Getenv("PORT")); port != "" {
+		return normalizePort(port)
+	}
+	return defaultListenAddr
+}
+
+func normalizePort(port string) string {
+	if strings.Contains(port, ":") {
+		return port
+	}
+	return ":" + port
+}
 
 // Webhook is a single webhook target with a URL.
 type Webhook struct {

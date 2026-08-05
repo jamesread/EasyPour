@@ -3,7 +3,6 @@ package order
 import (
 	"database/sql"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -31,77 +30,9 @@ type Store struct {
 	db *sql.DB
 }
 
-// GetOrdersDBPath returns the path for orders.db: same dir as config if config path set, else ./orders.db.
-func GetOrdersDBPath(configPath string) string {
-	if configPath != "" {
-		return filepath.Join(filepath.Dir(configPath), "orders.db")
-	}
-	return "orders.db"
-}
-
-// NewStore opens the SQLite database at dbPath and returns a store. Caller should call Init() then use the store; defer store.Close() when done.
-func NewStore(dbPath string) (*Store, error) {
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("open sqlite: %w", err)
-	}
-	return &Store{db: db}, nil
-}
-
-// Close closes the database connection.
-func (s *Store) Close() error {
-	if s.db == nil {
-		return nil
-	}
-	return s.db.Close()
-}
-
-// Init creates the orders table and indexes if they do not exist.
-func (s *Store) Init() error {
-	if s.db == nil {
-		return fmt.Errorf("store not initialized")
-	}
-	_, err := s.db.Exec(`
-		CREATE TABLE IF NOT EXISTS orders (
-			id TEXT PRIMARY KEY,
-			menu_item_id TEXT NOT NULL,
-			username TEXT NOT NULL,
-			add_sugar INTEGER NOT NULL,
-			add_milk INTEGER NOT NULL,
-			sugar_amount INTEGER NOT NULL,
-			milk_amount INTEGER NOT NULL,
-			status TEXT NOT NULL,
-			created_at INTEGER NOT NULL,
-			updated_at INTEGER NOT NULL,
-			group_id TEXT NOT NULL DEFAULT ''
-		);
-		CREATE INDEX IF NOT EXISTS idx_orders_username ON orders(username);
-		CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-	`)
-	if err != nil {
-		return fmt.Errorf("init orders table: %w", err)
-	}
-	if err := s.ensureGroupIDColumn(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Store) ensureGroupIDColumn() error {
-	_, err := s.db.Exec(`ALTER TABLE orders ADD COLUMN group_id TEXT NOT NULL DEFAULT ''`)
-	if err != nil {
-		// Column already exists on freshly created tables / prior migrations.
-		_ = err
-	}
-	_, err = s.db.Exec(`UPDATE orders SET group_id = id WHERE group_id = '' OR group_id IS NULL`)
-	if err != nil {
-		return fmt.Errorf("backfill group_id: %w", err)
-	}
-	_, err = s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_orders_group_id ON orders(group_id)`)
-	if err != nil {
-		return fmt.Errorf("index group_id: %w", err)
-	}
-	return nil
+// NewStore wraps a shared SQLite database.
+func NewStore(db *sql.DB) *Store {
+	return &Store{db: db}
 }
 
 // Create persists an order. Order.ID must be set; CreatedAt/UpdatedAt set to now if zero.

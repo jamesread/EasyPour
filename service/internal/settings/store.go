@@ -1,87 +1,61 @@
 package settings
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
-	"path/filepath"
 	"strings"
 
-	_ "modernc.org/sqlite"
+	"easypour/service/internal/cvar"
 )
 
-const keyAppriseURL = "apprise_url"
-
-// Settings holds runtime-configurable application settings.
+// Settings holds runtime-configurable application settings (legacy DTO for Apprise).
 type Settings struct {
 	AppriseURL string
 }
 
-// Store persists settings in SQLite.
+// Store persists settings and cvars in SQLite.
 type Store struct {
 	db *sql.DB
 }
 
-// GetSettingsDBPath returns the path for settings.db: same dir as config if set, else ./settings.db.
-func GetSettingsDBPath(configPath string) string {
-	if configPath != "" {
-		return filepath.Join(filepath.Dir(configPath), "settings.db")
-	}
-	return "settings.db"
+// NewStore wraps a shared SQLite database.
+func NewStore(db *sql.DB) *Store {
+	return &Store{db: db}
 }
 
-// NewStore opens the SQLite database at dbPath.
-func NewStore(dbPath string) (*Store, error) {
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("open sqlite: %w", err)
+// EnsureDefaultCvars inserts missing catalog keys and refreshes metadata only on conflict.
+func (s *Store) EnsureDefaultCvars(ctx context.Context, siteTitle string) error {
+	for _, def := range cvar.Defaults(siteTitle) {
+		if err := s.InsertCvarIfMissing(ctx, CvarRow{
+			Key: def.Key, MainType: def.MainType,
+			Title: def.Title, Description: def.Description,
+			Category: def.Category, Ordinal: def.Ordinal,
+			ValueInt: def.ValueInt, ValueString: def.ValueString,
+		}); err != nil {
+			return err
+		}
 	}
-	return &Store{db: db}, nil
+	return s.migrateLegacyAppriseURL(ctx)
 }
 
-// Close closes the database connection.
-func (s *Store) Close() error {
-	if s.db == nil {
-		return nil
-	}
-	return s.db.Close()
-}
-
-// Init creates the settings table if it does not exist.
-func (s *Store) Init() error {
-	if s.db == nil {
-		return fmt.Errorf("store not initialized")
-	}
-	_, err := s.db.Exec(`
-		CREATE TABLE IF NOT EXISTS settings (
-			key TEXT PRIMARY KEY,
-			value TEXT NOT NULL
-		)
-	`)
-	if err != nil {
-		return fmt.Errorf("init settings table: %w", err)
-	}
-	return nil
-}
-
-// Get returns the current settings.
+// Get returns the current settings (Apprise URL from cvars).
 func (s *Store) Get() (*Settings, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("store not initialized")
 	}
-	out := &Settings{}
-	var value string
-	err := s.db.QueryRow(`SELECT value FROM settings WHERE key = ?`, keyAppriseURL).Scan(&value)
-	if err == sql.ErrNoRows {
-		return out, nil
-	}
+	row, err := s.FindCvar(context.Background(), cvar.KeyAppriseURL)
 	if err != nil {
-		return nil, fmt.Errorf("get apprise_url: %w", err)
+		return nil, err
 	}
-	out.AppriseURL = value
+	out := &Settings{}
+	if row != nil {
+		out.AppriseURL = row.ValueString
+	}
 	return out, nil
 }
 
-// Update persists settings.
+// Update persists settings (Apprise URL into the apprise_url cvar).
 func (s *Store) Update(in *Settings) error {
 	if s.db == nil {
 		return fmt.Errorf("store not initialized")
@@ -90,12 +64,37 @@ func (s *Store) Update(in *Settings) error {
 		return fmt.Errorf("settings required")
 	}
 	url := strings.TrimSpace(in.AppriseURL)
-	_, err := s.db.Exec(`
-		INSERT INTO settings (key, value) VALUES (?, ?)
-		ON CONFLICT(key) DO UPDATE SET value = excluded.value
-	`, keyAppriseURL, url)
-	if err != nil {
-		return fmt.Errorf("update apprise_url: %w", err)
+	return s.UpdateCvar(context.Background(), cvar.KeyAppriseURL, 0, url)
+}
+
+func (s *Store) migrateLegacyAppriseURL(ctx context.Context) error {
+	legacy, err := s.readLegacyAppriseURL(ctx)
+	if err != nil || legacy == "" {
+		return err
 	}
-	return nil
+	return s.copyLegacyIntoEmptyCvar(ctx, cvar.KeyAppriseURL, legacy)
+}
+
+func (s *Store) copyLegacyIntoEmptyCvar(ctx context.Context, key, value string) error {
+	row, err := s.FindCvar(ctx, key)
+	if err != nil || shouldSkipLegacyMigrate(row) {
+		return err
+	}
+	return s.UpdateCvar(ctx, key, 0, value)
+}
+
+func (s *Store) readLegacyAppriseURL(ctx context.Context) (string, error) {
+	var legacy string
+	err := s.db.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, cvar.KeyAppriseURL).Scan(&legacy)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read legacy apprise_url: %w", err)
+	}
+	return strings.TrimSpace(legacy), nil
+}
+
+func shouldSkipLegacyMigrate(row *CvarRow) bool {
+	return row == nil || row.ValueString != ""
 }

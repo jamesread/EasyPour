@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -32,6 +33,7 @@ import (
 	"easypour/service/internal/menu"
 	"easypour/service/internal/order"
 	"easypour/service/internal/settings"
+	"easypour/service/internal/sqlite"
 	easypourv1 "easypour/service/gen/easypour/v1"
 	"easypour/service/gen/easypour/v1/easypourv1connect"
 )
@@ -142,12 +144,16 @@ type EasyPourServer struct {
 	appriseTimers  map[string]*time.Timer // debounce Apprise notify per order group
 }
 
-// Init returns app version and configured OAuth2 providers. Callable unauthenticated.
+// Init returns app version, site title, features, and OAuth2 providers. Callable unauthenticated.
 func (s *EasyPourServer) Init(
 	ctx context.Context,
 	req *connect.Request[easypourv1.InitRequest],
 ) (*connect.Response[easypourv1.InitResponse], error) {
-	resp := &easypourv1.InitResponse{Version: buildinfo.Version}
+	resp := &easypourv1.InitResponse{
+		Version:   buildinfo.Version,
+		SiteTitle: s.siteTitle(ctx),
+		Features:  s.initFeatures(ctx),
+	}
 	if s.oauthProviders != nil {
 		resp.OauthProviders = s.oauthProviders
 	}
@@ -1062,6 +1068,33 @@ func setupAuth(appConfig *config.Config) (*auth.AuthShimContext, error) {
 	return authCtx, nil
 }
 
+func assertMigration(ctx context.Context, db *sql.DB, required string) error {
+	ok, err := sqlite.HasMigration(ctx, db, required)
+	if err != nil {
+		return fmt.Errorf("connected to the database, but the migrations table could not be queried. run sql-migrate up: %w", err)
+	}
+	if ok {
+		return nil
+	}
+	latest, _ := sqlite.LatestMigration(ctx, db)
+	if latest == "" {
+		latest = "null"
+	}
+	return fmt.Errorf("requires database version %s but the database is at version %s; run database migrations", required, latest)
+}
+
+func logDatabaseMigration(ctx context.Context, db *sql.DB) {
+	latest, err := sqlite.LatestMigration(ctx, db)
+	if err != nil {
+		logrus.Warnf("Could not read current database migration: %v", err)
+		return
+	}
+	if latest == "" {
+		latest = "none"
+	}
+	logrus.Infof("Database migration: %s", latest)
+}
+
 func main() {
 	hashPassword := flag.String("hash-password", "", "generate Argon2id hash for a password and exit (use in config.yaml auth.localUsers.users[].password)")
 	configDir := flag.String("configdir", "", "directory containing config.yaml (for integration tests)")
@@ -1099,38 +1132,31 @@ func main() {
 		}()
 	}
 
-	menuPath := menu.GetMenuPath(cfgPath)
-	menuStore := menu.NewStore(menuPath)
-	items, err := menuStore.Load()
+	dataDir := sqlite.DataDir(cfgPath)
+	db, err := sqlite.Open(sqlite.Path(cfgPath))
 	if err != nil {
-		logrus.Fatalf("Load menu: %v", err)
+		logrus.Fatalf("Open database: %v", err)
 	}
-	if _, statErr := os.Stat(menuPath); statErr != nil && os.IsNotExist(statErr) {
-		if err := menuStore.Save(items); err != nil {
-			logrus.Warnf("Write default menu: %v", err)
-		} else {
-			logrus.Infof("Created default menu at %s", menuPath)
-		}
-	}
+	defer db.Close()
 
-	ordersDBPath := order.GetOrdersDBPath(cfgPath)
-	orderStore, err := order.NewStore(ordersDBPath)
-	if err != nil {
-		logrus.Fatalf("Open order store: %v", err)
+	ctx := context.Background()
+	if err := assertMigration(ctx, db, config.RequiredMigration); err != nil {
+		logrus.Fatalf("Database migration check: %v", err)
 	}
-	defer orderStore.Close()
-	if err := orderStore.Init(); err != nil {
-		logrus.Fatalf("Init order store: %v", err)
-	}
+	logDatabaseMigration(ctx, db)
 
-	settingsDBPath := settings.GetSettingsDBPath(cfgPath)
-	settingsStore, err := settings.NewStore(settingsDBPath)
-	if err != nil {
-		logrus.Fatalf("Open settings store: %v", err)
+	menuStore := menu.NewStore(db, dataDir)
+	orderStore := order.NewStore(db)
+	settingsStore := settings.NewStore(db)
+
+	if err := sqlite.MigrateLegacy(db, dataDir); err != nil {
+		logrus.Fatalf("Migrate legacy databases: %v", err)
 	}
-	defer settingsStore.Close()
-	if err := settingsStore.Init(); err != nil {
-		logrus.Fatalf("Init settings store: %v", err)
+	if err := menuStore.SeedIfEmpty(); err != nil {
+		logrus.Fatalf("Seed menu: %v", err)
+	}
+	if err := settingsStore.EnsureDefaultCvars(ctx, "EasyPour"); err != nil {
+		logrus.Fatalf("Ensure default cvars: %v", err)
 	}
 
 	sseBroadcast := newSSEBroadcaster()
@@ -1171,7 +1197,7 @@ func main() {
 	if authCtx != nil {
 		mux.Handle("/login", loginOrSPA(authCtx, spaHandler))
 		mux.HandleFunc("/logout", handleLogout(authCtx))
-		imagesDir := filepath.Join(filepath.Dir(menuPath), "images")
+		imagesDir := filepath.Join(dataDir, "images")
 		mux.HandleFunc("/upload", handleUpload(authCtx, imagesDir))
 		mux.Handle("/images/", http.StripPrefix("/images", http.FileServer(http.Dir(imagesDir))))
 		mux.Handle("/orders/events", withAuth(authCtx, handleSSEOrderEvents(sseBroadcast)))
@@ -1188,7 +1214,7 @@ func main() {
 		mux.Handle("/", spaHandler)
 	}
 
-	addr := ":9654"
+	addr := config.ListenAddr()
 	logrus.Infof("Starting EasyPour service on %s", addr)
 	logrus.Infof("ConnectRPC endpoint: http://localhost%s%s", addr, path)
 	if authCtx != nil {

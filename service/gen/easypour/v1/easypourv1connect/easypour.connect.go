@@ -68,6 +68,12 @@ const (
 	// EasyPourServiceUpdateSettingsProcedure is the fully-qualified name of the EasyPourService's
 	// UpdateSettings RPC.
 	EasyPourServiceUpdateSettingsProcedure = "/easypour.v1.EasyPourService/UpdateSettings"
+	// EasyPourServiceListCvarsProcedure is the fully-qualified name of the EasyPourService's ListCvars
+	// RPC.
+	EasyPourServiceListCvarsProcedure = "/easypour.v1.EasyPourService/ListCvars"
+	// EasyPourServiceUpdateCvarProcedure is the fully-qualified name of the EasyPourService's
+	// UpdateCvar RPC.
+	EasyPourServiceUpdateCvarProcedure = "/easypour.v1.EasyPourService/UpdateCvar"
 	// EasyPourServiceTestAppriseNotificationProcedure is the fully-qualified name of the
 	// EasyPourService's TestAppriseNotification RPC.
 	EasyPourServiceTestAppriseNotificationProcedure = "/easypour.v1.EasyPourService/TestAppriseNotification"
@@ -99,6 +105,10 @@ type EasyPourServiceClient interface {
 	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
 	// UpdateSettings updates runtime settings (admin only).
 	UpdateSettings(context.Context, *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error)
+	// ListCvars returns configuration variables for the admin Settings page. Admin only.
+	ListCvars(context.Context, *connect.Request[v1.ListCvarsRequest]) (*connect.Response[v1.ListCvarsResponse], error)
+	// UpdateCvar updates a configuration variable value. Admin only.
+	UpdateCvar(context.Context, *connect.Request[v1.UpdateCvarRequest]) (*connect.Response[v1.Cvar], error)
 	// TestAppriseNotification sends a test Apprise notification (admin only).
 	TestAppriseNotification(context.Context, *connect.Request[v1.TestAppriseNotificationRequest]) (*connect.Response[v1.TestAppriseNotificationResponse], error)
 }
@@ -186,6 +196,18 @@ func NewEasyPourServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(easyPourServiceMethods.ByName("UpdateSettings")),
 			connect.WithClientOptions(opts...),
 		),
+		listCvars: connect.NewClient[v1.ListCvarsRequest, v1.ListCvarsResponse](
+			httpClient,
+			baseURL+EasyPourServiceListCvarsProcedure,
+			connect.WithSchema(easyPourServiceMethods.ByName("ListCvars")),
+			connect.WithClientOptions(opts...),
+		),
+		updateCvar: connect.NewClient[v1.UpdateCvarRequest, v1.Cvar](
+			httpClient,
+			baseURL+EasyPourServiceUpdateCvarProcedure,
+			connect.WithSchema(easyPourServiceMethods.ByName("UpdateCvar")),
+			connect.WithClientOptions(opts...),
+		),
 		testAppriseNotification: connect.NewClient[v1.TestAppriseNotificationRequest, v1.TestAppriseNotificationResponse](
 			httpClient,
 			baseURL+EasyPourServiceTestAppriseNotificationProcedure,
@@ -209,6 +231,8 @@ type easyPourServiceClient struct {
 	updateOrderStatus       *connect.Client[v1.UpdateOrderStatusRequest, v1.UpdateOrderStatusResponse]
 	getSettings             *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
 	updateSettings          *connect.Client[v1.UpdateSettingsRequest, v1.UpdateSettingsResponse]
+	listCvars               *connect.Client[v1.ListCvarsRequest, v1.ListCvarsResponse]
+	updateCvar              *connect.Client[v1.UpdateCvarRequest, v1.Cvar]
 	testAppriseNotification *connect.Client[v1.TestAppriseNotificationRequest, v1.TestAppriseNotificationResponse]
 }
 
@@ -272,6 +296,16 @@ func (c *easyPourServiceClient) UpdateSettings(ctx context.Context, req *connect
 	return c.updateSettings.CallUnary(ctx, req)
 }
 
+// ListCvars calls easypour.v1.EasyPourService.ListCvars.
+func (c *easyPourServiceClient) ListCvars(ctx context.Context, req *connect.Request[v1.ListCvarsRequest]) (*connect.Response[v1.ListCvarsResponse], error) {
+	return c.listCvars.CallUnary(ctx, req)
+}
+
+// UpdateCvar calls easypour.v1.EasyPourService.UpdateCvar.
+func (c *easyPourServiceClient) UpdateCvar(ctx context.Context, req *connect.Request[v1.UpdateCvarRequest]) (*connect.Response[v1.Cvar], error) {
+	return c.updateCvar.CallUnary(ctx, req)
+}
+
 // TestAppriseNotification calls easypour.v1.EasyPourService.TestAppriseNotification.
 func (c *easyPourServiceClient) TestAppriseNotification(ctx context.Context, req *connect.Request[v1.TestAppriseNotificationRequest]) (*connect.Response[v1.TestAppriseNotificationResponse], error) {
 	return c.testAppriseNotification.CallUnary(ctx, req)
@@ -303,6 +337,10 @@ type EasyPourServiceHandler interface {
 	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
 	// UpdateSettings updates runtime settings (admin only).
 	UpdateSettings(context.Context, *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error)
+	// ListCvars returns configuration variables for the admin Settings page. Admin only.
+	ListCvars(context.Context, *connect.Request[v1.ListCvarsRequest]) (*connect.Response[v1.ListCvarsResponse], error)
+	// UpdateCvar updates a configuration variable value. Admin only.
+	UpdateCvar(context.Context, *connect.Request[v1.UpdateCvarRequest]) (*connect.Response[v1.Cvar], error)
 	// TestAppriseNotification sends a test Apprise notification (admin only).
 	TestAppriseNotification(context.Context, *connect.Request[v1.TestAppriseNotificationRequest]) (*connect.Response[v1.TestAppriseNotificationResponse], error)
 }
@@ -386,6 +424,18 @@ func NewEasyPourServiceHandler(svc EasyPourServiceHandler, opts ...connect.Handl
 		connect.WithSchema(easyPourServiceMethods.ByName("UpdateSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
+	easyPourServiceListCvarsHandler := connect.NewUnaryHandler(
+		EasyPourServiceListCvarsProcedure,
+		svc.ListCvars,
+		connect.WithSchema(easyPourServiceMethods.ByName("ListCvars")),
+		connect.WithHandlerOptions(opts...),
+	)
+	easyPourServiceUpdateCvarHandler := connect.NewUnaryHandler(
+		EasyPourServiceUpdateCvarProcedure,
+		svc.UpdateCvar,
+		connect.WithSchema(easyPourServiceMethods.ByName("UpdateCvar")),
+		connect.WithHandlerOptions(opts...),
+	)
 	easyPourServiceTestAppriseNotificationHandler := connect.NewUnaryHandler(
 		EasyPourServiceTestAppriseNotificationProcedure,
 		svc.TestAppriseNotification,
@@ -418,6 +468,10 @@ func NewEasyPourServiceHandler(svc EasyPourServiceHandler, opts ...connect.Handl
 			easyPourServiceGetSettingsHandler.ServeHTTP(w, r)
 		case EasyPourServiceUpdateSettingsProcedure:
 			easyPourServiceUpdateSettingsHandler.ServeHTTP(w, r)
+		case EasyPourServiceListCvarsProcedure:
+			easyPourServiceListCvarsHandler.ServeHTTP(w, r)
+		case EasyPourServiceUpdateCvarProcedure:
+			easyPourServiceUpdateCvarHandler.ServeHTTP(w, r)
 		case EasyPourServiceTestAppriseNotificationProcedure:
 			easyPourServiceTestAppriseNotificationHandler.ServeHTTP(w, r)
 		default:
@@ -475,6 +529,14 @@ func (UnimplementedEasyPourServiceHandler) GetSettings(context.Context, *connect
 
 func (UnimplementedEasyPourServiceHandler) UpdateSettings(context.Context, *connect.Request[v1.UpdateSettingsRequest]) (*connect.Response[v1.UpdateSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.UpdateSettings is not implemented"))
+}
+
+func (UnimplementedEasyPourServiceHandler) ListCvars(context.Context, *connect.Request[v1.ListCvarsRequest]) (*connect.Response[v1.ListCvarsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.ListCvars is not implemented"))
+}
+
+func (UnimplementedEasyPourServiceHandler) UpdateCvar(context.Context, *connect.Request[v1.UpdateCvarRequest]) (*connect.Response[v1.Cvar], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("easypour.v1.EasyPourService.UpdateCvar is not implemented"))
 }
 
 func (UnimplementedEasyPourServiceHandler) TestAppriseNotification(context.Context, *connect.Request[v1.TestAppriseNotificationRequest]) (*connect.Response[v1.TestAppriseNotificationResponse], error) {

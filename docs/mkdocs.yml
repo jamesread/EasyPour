@@ -1,0 +1,6 @@
+site_name: EasyPour
+docs_dir: .
+nav:
+  - Configuration: configuration/index.md
+  - Installation:
+      - Database migrations: installation/migrations.md

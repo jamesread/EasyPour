@@ -5,7 +5,7 @@
  * Run from repo root: node integration-tests/run-tests.js
  * Or: cd integration-tests && npm run test:run
  */
-import { spawn } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { createInterface } from 'readline'
@@ -14,8 +14,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(__dirname, '..')
 const testsDir = join(__dirname, 'tests')
 const serviceBin = join(repoRoot, 'service', 'easypour-service')
+const dbPath = join(testsDir, 'easypour.db')
+
+function runMigrations() {
+  const result = spawnSync('sql-migrate', ['up'], {
+    cwd: join(repoRoot, 'database', 'sqlite'),
+    env: { ...process.env, DB_PATH: dbPath },
+    encoding: 'utf8',
+  })
+  if (result.status !== 0) {
+    throw new Error(`sql-migrate up failed: ${result.stderr || result.stdout || result.error}`)
+  }
+}
 
 async function main() {
+  runMigrations()
   const env = { ...process.env, EASYPOUR_BASE_URL: 'http://localhost:9654' }
   const child = spawn(serviceBin, ['-configdir', testsDir], {
     cwd: join(repoRoot, 'service'),

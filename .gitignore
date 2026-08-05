@@ -20,8 +20,8 @@ go.work.sum
 # Runtime / temp
 service/tmp/
 service/images/
-service/orders.db
-service/settings.db
+service/*.db
+integration-tests/tests/*.db
 
 # Environment
 .env

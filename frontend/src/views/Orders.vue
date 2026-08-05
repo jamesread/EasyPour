@@ -1,57 +1,80 @@
 <template>
   <main class="orders-page">
-    <section class="padding">
-      <div class="orders-header">
-        <h2>My Orders</h2>
-        <button type="button" class="neutral" @click="$router.push('/')" aria-label="Close">Close</button>
-      </div>
+    <Section
+      title="My Orders"
+      subtitle="Your recent orders."
+      :padding="false"
+    >
+      <template #toolbar>
+        <button
+          type="button"
+          class="neutral"
+          aria-label="Close"
+          @click="$router.push('/')"
+        >
+          Close
+        </button>
+      </template>
 
-      <p class="orders-intro">Your recent orders.</p>
-
-      <div v-if="loadError" class="orders-error" role="alert">
+      <div
+        v-if="loadError"
+        class="orders-error padding"
+        role="alert"
+      >
         {{ loadError }}
       </div>
-      <div v-else-if="loading" class="orders-loading" aria-live="polite">
+      <div
+        v-else-if="loading"
+        class="orders-loading padding"
+        aria-live="polite"
+      >
         <p>Loading orders…</p>
       </div>
-      <div v-else-if="orderGroups.length === 0" class="empty-orders">
+      <div
+        v-else-if="orderRows.length === 0"
+        class="orders-empty padding"
+      >
         <p>No orders yet.</p>
-        <button type="button" class="neutral" @click="$router.push('/')">Browse Menu</button>
+        <button
+          type="button"
+          class="neutral"
+          @click="$router.push('/')"
+        >
+          Browse Menu
+        </button>
       </div>
-
-      <div v-else class="orders-table-wrap">
-        <table class="orders-table" role="grid">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Items</th>
-              <th>Status</th>
-              <th>Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="group in orderGroups"
-              :key="group.groupId"
-              class="order-row"
-              @click="$router.push({ name: 'OrderStatus', params: { orderId: group.groupId } })"
-            >
-              <td>{{ displayGroupId(group.groupId) }}</td>
-              <td>{{ itemCountLabel(group) }}</td>
-              <td>
-                <span class="tag" :class="statusKarmaClass(group.status)">{{ group.status }}</span>
-              </td>
-              <td>{{ formatDate(group.createdAt) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+      <Table
+        v-else
+        :data="orderRows"
+        :headers="headers"
+        :show-pagination="orderRows.length > 10"
+      >
+        <template #cell-groupId="{ row, value }">
+          <router-link :to="{ name: 'OrderStatus', params: { orderId: row.groupId } }">
+            {{ displayGroupId(value) }}
+          </router-link>
+        </template>
+        <template #cell-itemCount="{ value }">
+          {{ value === 1 ? '1 item' : `${value} items` }}
+        </template>
+        <template #cell-status="{ value }">
+          <span
+            class="tag"
+            :class="statusKarmaClass(value)"
+          >{{ value }}</span>
+        </template>
+        <template #cell-created="{ value }">
+          {{ formatDate(value) }}
+        </template>
+      </Table>
+    </Section>
   </main>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import Section from 'picocrank/vue/components/Section.vue'
+import Table from 'picocrank/vue/components/Table.vue'
 import { useCurrentUser } from '../composables/useCurrentUser'
 import { useOrderSync } from '../composables/useOrderSync.js'
 import { groupOrders } from '../composables/useRecentOrders.js'
@@ -62,6 +85,13 @@ const { orders, refresh } = useOrderSync()
 const loading = ref(true)
 const loadError = ref(null)
 
+const headers = [
+  { key: 'groupId', label: 'Order ID', sortable: true },
+  { key: 'itemCount', label: 'Items', sortable: true },
+  { key: 'status', label: 'Status', sortable: true },
+  { key: 'created', label: 'Created', sortable: true },
+]
+
 const myOrders = computed(() => {
   const list = orders.value ?? []
   const me = username.value
@@ -69,17 +99,26 @@ const myOrders = computed(() => {
   return list.filter((o) => !o?.username || o.username === me)
 })
 
-const orderGroups = computed(() => groupOrders(myOrders.value))
+const orderRows = computed(() =>
+  groupOrders(myOrders.value).map((group) => ({
+    groupId: group.groupId,
+    itemCount: Array.isArray(group?.items) ? group.items.length : 0,
+    status: group.status,
+    created: createdAtMs(group.createdAt),
+  })),
+)
+
+function createdAtMs(ts) {
+  if (ts == null) return null
+  const n = typeof ts === 'bigint' ? Number(ts) : Number(ts ?? 0)
+  if (!n) return null
+  return n < 1e12 ? n * 1000 : n
+}
 
 function displayGroupId(id) {
   if (!id) return '—'
   const s = String(id)
   return s.length > 8 ? s.slice(0, 8) : s
-}
-
-function itemCountLabel(group) {
-  const n = Array.isArray(group?.items) ? group.items.length : 0
-  return n === 1 ? '1 item' : `${n} items`
 }
 
 function statusKarmaClass(status) {
@@ -100,9 +139,7 @@ function statusKarmaClass(status) {
 
 function formatDate(ts) {
   if (ts == null) return '—'
-  const n = typeof ts === 'bigint' ? Number(ts) : Number(ts ?? 0)
-  const d = new Date(n < 1e12 ? n * 1000 : n)
-  return d.toLocaleString()
+  return new Date(ts).toLocaleString()
 }
 
 onMounted(async () => {
@@ -121,71 +158,18 @@ onMounted(async () => {
   min-height: 100vh;
 }
 
-.orders-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.orders-intro {
-  color: #666;
-  margin-bottom: 1.5rem;
-  font-size: 0.95rem;
-}
-
 .orders-error {
-  padding: 1rem;
   background: #fef2f2;
   color: #991b1b;
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
 }
 
 .orders-loading,
-.empty-orders {
-  padding: 2rem;
+.orders-empty {
   text-align: center;
   color: #64748b;
 }
 
-.empty-orders p {
+.orders-empty p {
   margin-bottom: 1rem;
-  font-size: 1.1rem;
-}
-
-.orders-table-wrap {
-  overflow-x: auto;
-}
-
-.orders-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.orders-table th,
-.orders-table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.orders-table th {
-  font-weight: 600;
-  color: #0f172a;
-  background: #f8fafc;
-}
-
-.orders-table td {
-  color: #475569;
-}
-
-.order-row {
-  cursor: pointer;
-}
-
-.order-row:hover {
-  background-color: #f5f5f5;
 }
 </style>

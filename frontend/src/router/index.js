@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { CookingPotIcon, Invoice01Icon, Notification03Icon, ShoppingCart01Icon, SoftDrink01Icon } from '@hugeicons/core-free-icons'
+import { CookingPotIcon, Invoice01Icon, Notification03Icon, Configuration01Icon, ShoppingCart01Icon, SoftDrink01Icon } from '@hugeicons/core-free-icons'
 import Menu from '../views/Menu.vue'
 import Basket from '../views/Basket.vue'
 import UserProfile from '../views/UserProfile.vue'
@@ -7,6 +7,7 @@ import Orders from '../views/Orders.vue'
 import AdminOrders from '../views/AdminOrders.vue'
 import AdminApprise from '../views/AdminApprise.vue'
 import AdminKitchen from '../views/AdminKitchen.vue'
+import SettingsAdmin from '../views/SettingsAdmin.vue'
 import OrderStatus from '../views/OrderStatus.vue'
 
 const routes = [
@@ -55,6 +56,12 @@ const routes = [
     name: 'AdminApprise',
     component: AdminApprise,
     meta: { title: 'Apprise', icon: Notification03Icon, description: 'Configure notifications for new orders' },
+  },
+  {
+    path: '/admin/settings',
+    name: 'SettingsAdmin',
+    component: SettingsAdmin,
+    meta: { title: 'Settings', icon: Configuration01Icon, description: 'Site-wide configuration variables' },
   },
   {
     path: '/profile',

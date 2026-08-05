@@ -1,82 +1,75 @@
 <template>
   <main class="orders-page">
-    <section class="padding">
-      <div class="orders-header">
-        <h2>Admin Orders</h2>
+    <Section
+      title="Admin Orders"
+      subtitle="All orders. Acknowledge pending orders or mark as delivered."
+      :padding="false"
+    >
+      <template #toolbar>
         <button type="button" class="neutral" @click="$router.push('/profile')" aria-label="Back">Back</button>
-      </div>
+      </template>
 
-      <p class="orders-intro">All orders. Acknowledge pending orders or mark as delivered.</p>
-
-      <div v-if="!isAdmin" class="orders-error" role="alert">
+      <div v-if="!isAdmin" class="orders-error padding" role="alert">
         Admin access required.
       </div>
-      <div v-else-if="loadError" class="orders-error" role="alert">
+      <div v-else-if="loadError" class="orders-error padding" role="alert">
         {{ loadError }}
       </div>
-      <div v-else-if="loading" class="orders-loading" aria-live="polite">
+      <div v-else-if="loading" class="orders-loading padding" aria-live="polite">
         <p>Loading orders…</p>
       </div>
-      <div v-else-if="orders.length === 0" class="empty-orders">
-        <p>No orders yet.</p>
-      </div>
-
-      <div v-else class="orders-table-wrap">
-        <table class="orders-table" role="grid">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Username</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="o in orders"
-              :key="o.orderId"
-              class="order-row"
-              @click="openOrder(o.orderId)"
+      <Table
+        v-else
+        :data="orderRows"
+        :headers="headers"
+        :show-pagination="orderRows.length > 10"
+      >
+        <template #cell-orderId="{ row, value }">
+          <router-link :to="{ name: 'OrderStatus', params: { orderId: row.orderId } }">
+            {{ displayOrderId(value) }}
+          </router-link>
+        </template>
+        <template #cell-status="{ value }">
+          <span class="tag" :class="statusKarmaClass(value)">{{ value }}</span>
+        </template>
+        <template #cell-created="{ value }">
+          {{ formatDate(value) }}
+        </template>
+        <template #cell-actions="{ row }">
+          <span class="order-actions">
+            <button
+              v-if="row.status === 'pending'"
+              type="button"
+              class="good"
+              :disabled="updating === row.orderId"
+              @click="updateStatus(row.orderId, 'preparing')"
             >
-              <td>{{ displayOrderId(o.orderId) }}</td>
-              <td>{{ o.username || '—' }}</td>
-              <td><span class="tag" :class="statusKarmaClass(o.status)">{{ o.status }}</span></td>
-              <td>{{ formatDate(o.createdAt) }}</td>
-              <td class="order-actions" @click.stop>
-                <button
-                  v-if="o.status === 'pending'"
-                  type="button"
-                  class="good"
-                  :disabled="updating === o.orderId"
-                  @click="updateStatus(o.orderId, 'preparing')"
-                >
-                  {{ updating === o.orderId ? '…' : 'Acknowledge' }}
-                </button>
-                <button
-                  v-if="o.status === 'pending' || o.status === 'preparing'"
-                  type="button"
-                  class="good"
-                  :disabled="updating === o.orderId"
-                  @click="updateStatus(o.orderId, 'delivered')"
-                >
-                  {{ updating === o.orderId ? '…' : 'Mark Delivered' }}
-                </button>
-                <span v-if="o.status === 'delivered'">—</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+              {{ updating === row.orderId ? '…' : 'Acknowledge' }}
+            </button>
+            <button
+              v-if="row.status === 'pending' || row.status === 'preparing'"
+              type="button"
+              class="good"
+              :disabled="updating === row.orderId"
+              @click="updateStatus(row.orderId, 'delivered')"
+            >
+              {{ updating === row.orderId ? '…' : 'Mark Delivered' }}
+            </button>
+            <span v-if="row.status === 'delivered'">—</span>
+          </span>
+        </template>
+      </Table>
+    </Section>
   </main>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
+import Section from 'picocrank/vue/components/Section.vue'
+import Table from 'picocrank/vue/components/Table.vue'
 import { EasyPourService } from '../../gen/easypour/v1/easypour_pb.js'
 import { useCurrentUser } from '../composables/useCurrentUser'
 import { useOrderSync } from '../composables/useOrderSync.js'
@@ -96,6 +89,31 @@ const client = createOrderClient()
 const loading = ref(true)
 const loadError = ref(null)
 const updating = ref(null)
+
+const headers = [
+  { key: 'orderId', label: 'Order ID', sortable: true },
+  { key: 'username', label: 'Username', sortable: true },
+  { key: 'status', label: 'Status', sortable: true },
+  { key: 'created', label: 'Created', sortable: true },
+  { key: 'actions', label: 'Actions', sortable: false },
+]
+
+const orderRows = computed(() =>
+  (orders.value ?? []).map((o) => ({
+    orderId: o.orderId,
+    username: o.username || '—',
+    status: o.status,
+    created: createdAtMs(o.createdAt),
+    actions: '',
+  })),
+)
+
+function createdAtMs(ts) {
+  if (ts == null) return null
+  const n = typeof ts === 'bigint' ? Number(ts) : Number(ts ?? 0)
+  if (!n) return null
+  return n < 1e12 ? n * 1000 : n
+}
 
 function displayOrderId(id) {
   if (!id) return '—'
@@ -119,16 +137,9 @@ function statusKarmaClass(status) {
   }
 }
 
-function openOrder(orderId) {
-  if (!orderId) return
-  router.push({ name: 'OrderStatus', params: { orderId } })
-}
-
 function formatDate(ts) {
   if (ts == null) return '—'
-  const n = typeof ts === 'bigint' ? Number(ts) : Number(ts ?? 0)
-  const d = new Date(n < 1e12 ? n * 1000 : n)
-  return d.toLocaleString()
+  return new Date(ts).toLocaleString()
 }
 
 async function updateStatus(orderId, status) {
@@ -165,72 +176,14 @@ onMounted(async () => {
   min-height: 100vh;
 }
 
-.orders-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.orders-intro {
-  color: #666;
-  margin-bottom: 1.5rem;
-  font-size: 0.95rem;
-}
-
 .orders-error {
-  padding: 1rem;
   background: #fef2f2;
   color: #991b1b;
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
 }
 
-.orders-loading,
-.empty-orders {
-  padding: 2rem;
+.orders-loading {
   text-align: center;
   color: #64748b;
-}
-
-.empty-orders p {
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-}
-
-.orders-table-wrap {
-  overflow-x: auto;
-}
-
-.orders-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.orders-table th,
-.orders-table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.orders-table th {
-  font-weight: 600;
-  color: #0f172a;
-  background: #f8fafc;
-}
-
-.orders-table td {
-  color: #475569;
-}
-
-.order-row {
-  cursor: pointer;
-}
-
-.order-row:hover {
-  background-color: #f5f5f5;
 }
 
 .order-actions {
