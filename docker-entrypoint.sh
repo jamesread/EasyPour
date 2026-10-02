@@ -10,7 +10,19 @@ case "$DRIVER" in
     ;;
 esac
 
+CONFIG_DIR="/config"
+DEFAULTS="/usr/share/easypour/defaults"
+if [ -n "${EASYPOUR_CONFIG_FILE:-}" ]; then
+  CONFIG_DIR="$(dirname "$EASYPOUR_CONFIG_FILE")"
+fi
+
 if [ "$DRIVER" = "sqlite" ]; then
+  mkdir -p "$CONFIG_DIR" "$CONFIG_DIR/images"
+  for f in config.yaml menu.yaml; do
+    if [ ! -f "$CONFIG_DIR/$f" ] && [ -f "$DEFAULTS/$f" ]; then
+      cp "$DEFAULTS/$f" "$CONFIG_DIR/$f"
+    fi
+  done
   if [ -z "${DB_PATH:-}" ]; then
     if [ -n "${EASYPOUR_CONFIG_FILE:-}" ]; then
       export DB_PATH="$(dirname "$EASYPOUR_CONFIG_FILE")/easypour.db"

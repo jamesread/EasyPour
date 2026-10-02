@@ -23,6 +23,17 @@ func TestDataDir(t *testing.T) {
 	assert.Equal(t, ".", DataDir(""))
 }
 
+func TestDBPath_UsesEnvWhenSet(t *testing.T) {
+	t.Setenv("DB_PATH", "/config/easypour.db")
+	assert.Equal(t, "/config/easypour.db", DBPath(""))
+	assert.Equal(t, "/config/easypour.db", DBPath("/other/config.yaml"))
+}
+
+func TestDataDir_UsesDBPathEnv(t *testing.T) {
+	t.Setenv("DB_PATH", "/config/easypour.db")
+	assert.Equal(t, "/config", DataDir(""))
+}
+
 func TestHasMigration_AndLatest(t *testing.T) {
 	db, err := Open(filepath.Join(t.TempDir(), "easypour.db"))
 	require.NoError(t, err)

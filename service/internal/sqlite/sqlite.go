@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -20,8 +21,23 @@ func Path(configPath string) string {
 	return fileName
 }
 
+// DBPath returns the SQLite file path: DB_PATH when set, otherwise Path(configPath).
+func DBPath(configPath string) string {
+	if p := strings.TrimSpace(os.Getenv("DB_PATH")); p != "" {
+		return p
+	}
+	return Path(configPath)
+}
+
 // DataDir returns the directory that holds the DB, images, and optional menu.yaml seed.
 func DataDir(configPath string) string {
+	return dirForDBPath(DBPath(configPath), configPath)
+}
+
+func dirForDBPath(dbPath, configPath string) string {
+	if dir := filepath.Dir(dbPath); dir != "" && dir != "." {
+		return dir
+	}
 	if configPath != "" {
 		return filepath.Dir(configPath)
 	}

@@ -1133,7 +1133,7 @@ func main() {
 	}
 
 	dataDir := sqlite.DataDir(cfgPath)
-	db, err := sqlite.Open(sqlite.Path(cfgPath))
+	db, err := sqlite.Open(sqlite.DBPath(cfgPath))
 	if err != nil {
 		logrus.Fatalf("Open database: %v", err)
 	}
