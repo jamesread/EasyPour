@@ -7,7 +7,7 @@ builds:
   - env:
       - CGO_ENABLED=0
     binary: easypour-service
-    main: main.go
+    main: .
     dir: service
     goos:
       - linux
