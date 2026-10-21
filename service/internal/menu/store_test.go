@@ -19,7 +19,7 @@ func TestGetMenuPath_UsesConfigDir(t *testing.T) {
 
 func TestStore_EmptyDBSeedsDefaults(t *testing.T) {
 	store := openTestStore(t)
-	items, err := store.Load()
+	items, err := store.Load(t.Context())
 	require.NoError(t, err)
 	require.Len(t, items, 3)
 	ids := map[string]bool{}
@@ -34,7 +34,7 @@ func TestStore_EmptyDBSeedsDefaults(t *testing.T) {
 func TestStore_CreateUpdateDelete(t *testing.T) {
 	store := openTestStore(t)
 
-	created, err := store.Create(&easypourv1.MenuItem{
+	created, err := store.Create(t.Context(), &easypourv1.MenuItem{
 		Name:          "Espresso",
 		Description:   "Short shot",
 		SupportsSugar: true,
@@ -45,23 +45,23 @@ func TestStore_CreateUpdateDelete(t *testing.T) {
 	require.NotEmpty(t, created.Id)
 	assert.Equal(t, "Espresso", created.Name)
 
-	items, err := store.Load()
+	items, err := store.Load(t.Context())
 	require.NoError(t, err)
 	assert.Len(t, items, 4)
 
 	created.Name = "Double Espresso"
-	updated, err := store.Update(created)
+	updated, err := store.Update(t.Context(), created)
 	require.NoError(t, err)
 	assert.Equal(t, "Double Espresso", updated.Name)
 
-	require.NoError(t, store.Delete(created.Id))
-	items, err = store.Load()
+	require.NoError(t, store.Delete(t.Context(), created.Id))
+	items, err = store.Load(t.Context())
 	require.NoError(t, err)
 	assert.Len(t, items, 3)
 
-	_, err = store.Update(created)
+	_, err = store.Update(t.Context(), created)
 	require.Error(t, err)
-	err = store.Delete(created.Id)
+	err = store.Delete(t.Context(), created.Id)
 	require.Error(t, err)
 }
 
@@ -81,7 +81,7 @@ items:
 	require.NoError(t, err)
 
 	store := openTestStoreIn(t, dir)
-	items, err := store.Load()
+	items, err := store.Load(t.Context())
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, "latte", items[0].Id)
@@ -93,13 +93,13 @@ items:
 
 func TestStore_SkipsYAMLImportWhenRowsExist(t *testing.T) {
 	dir := t.TempDir()
-	db, err := sqlite.Open(filepath.Join(dir, "easypour.db"))
+	db, err := sqlite.Open(t.Context(), filepath.Join(dir, "easypour.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
-	require.NoError(t, sqlite.ApplySchema(db))
+	require.NoError(t, sqlite.ApplySchema(t.Context(), db))
 
 	store := NewStore(db, dir)
-	require.NoError(t, store.SeedIfEmpty())
+	require.NoError(t, store.SeedIfEmpty(t.Context()))
 
 	err = os.WriteFile(filepath.Join(dir, "menu.yaml"), []byte(`
 items:
@@ -112,9 +112,9 @@ items:
 `), 0644)
 	require.NoError(t, err)
 
-	require.NoError(t, store.SeedIfEmpty())
+	require.NoError(t, store.SeedIfEmpty(t.Context()))
 
-	items, err := store.Load()
+	items, err := store.Load(t.Context())
 	require.NoError(t, err)
 	require.Len(t, items, 3)
 	for _, it := range items {
@@ -129,11 +129,11 @@ func openTestStore(t *testing.T) *Store {
 
 func openTestStoreIn(t *testing.T, dir string) *Store {
 	t.Helper()
-	db, err := sqlite.Open(filepath.Join(dir, "easypour.db"))
+	db, err := sqlite.Open(t.Context(), filepath.Join(dir, "easypour.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
-	require.NoError(t, sqlite.ApplySchema(db))
+	require.NoError(t, sqlite.ApplySchema(t.Context(), db))
 	store := NewStore(db, dir)
-	require.NoError(t, store.SeedIfEmpty())
+	require.NoError(t, store.SeedIfEmpty(t.Context()))
 	return store
 }

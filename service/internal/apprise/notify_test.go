@@ -24,7 +24,7 @@ func TestNotify_PostsJSONPayload(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod = r.Method
 		gotContentType = r.Header.Get("Content-Type")
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		assert.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -41,7 +41,7 @@ func TestNotify_PostsJSONPayload(t *testing.T) {
 func TestNotify_DefaultsTypeToInfo(t *testing.T) {
 	var gotBody Payload
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		assert.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -54,7 +54,7 @@ func TestNotify_RetriesOnFailureThenSucceeds(t *testing.T) {
 	var attempts atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n := attempts.Add(1)
-		io.Copy(io.Discard, r.Body)
+		_, _ = io.Copy(io.Discard, r.Body)
 		if n < 2 {
 			w.WriteHeader(http.StatusBadGateway)
 			return

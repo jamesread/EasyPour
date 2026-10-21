@@ -36,9 +36,7 @@ func TestListenAddr_TrimsWhitespace(t *testing.T) {
 }
 
 func TestGetConfigPath_ReturnsEmptyWhenNoFileExists(t *testing.T) {
-	orig := os.Getenv("EASYPOUR_CONFIG_FILE")
-	defer os.Setenv("EASYPOUR_CONFIG_FILE", orig)
-	os.Unsetenv("EASYPOUR_CONFIG_FILE")
+	t.Setenv("EASYPOUR_CONFIG_FILE", "")
 
 	path := GetConfigPath()
 	assert.Empty(t, path)
@@ -67,9 +65,7 @@ oauthProviders:
 `), 0644)
 	require.NoError(t, err)
 
-	origWd, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(origWd)
+	t.Chdir(dir)
 
 	cfg := LoadConfig()
 	require.NotNil(t, cfg)
@@ -80,4 +76,14 @@ oauthProviders:
 	assert.Equal(t, "google", cfg.OAuthProviders[0].ID)
 	assert.Equal(t, "Google", cfg.OAuthProviders[0].Name)
 	assert.Equal(t, "https://example.com/auth", cfg.OAuthProviders[0].AuthURL)
+}
+
+func TestGetConfigPath_PrefersConfigDirOverride(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	require.NoError(t, os.WriteFile(path, []byte("configVersion: 1\n"), 0o600))
+	SetConfigDir(dir)
+	t.Cleanup(func() { SetConfigDir("") })
+
+	assert.Equal(t, path, GetConfigPath())
 }

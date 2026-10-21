@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"connectrpc.com/connect"
 
@@ -14,10 +15,20 @@ import (
 func toProtoCvar(row *settings.CvarRow) *easypourv1.Cvar {
 	return &easypourv1.Cvar{
 		Key: row.Key, MainType: row.MainType,
-		ValueInt: int32(row.ValueInt), ValueString: row.ValueString,
+		ValueInt: clampToInt32(row.ValueInt), ValueString: row.ValueString,
 		Title: row.Title, Description: row.Description,
-		Category: row.Category, Ordinal: int32(row.Ordinal),
+		Category: row.Category, Ordinal: clampToInt32(row.Ordinal),
 	}
+}
+
+func clampToInt32(v int) int32 {
+	if v > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if v < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
 }
 
 func appendProtoCvars(dst []*easypourv1.Cvar, rows []settings.CvarRow) []*easypourv1.Cvar {
@@ -51,7 +62,7 @@ func (s *EasyPourServer) initFeatures(_ context.Context) *easypourv1.Features {
 }
 
 func (s *EasyPourServer) ListCvars(ctx context.Context, _ *connect.Request[easypourv1.ListCvarsRequest]) (*connect.Response[easypourv1.ListCvarsResponse], error) {
-	if _, err := s.requireAdmin(ctx); err != nil {
+	if err := s.requireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	if s.settingsStore == nil {
@@ -100,7 +111,7 @@ func validateBoolCvar(valueInt int32) int {
 }
 
 func (s *EasyPourServer) UpdateCvar(ctx context.Context, req *connect.Request[easypourv1.UpdateCvarRequest]) (*connect.Response[easypourv1.Cvar], error) {
-	if _, err := s.requireAdmin(ctx); err != nil {
+	if err := s.requireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	return s.applyCvarUpdate(ctx, req.Msg.Key, req.Msg.ValueInt, req.Msg.ValueString)

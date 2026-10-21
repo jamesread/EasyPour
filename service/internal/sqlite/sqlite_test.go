@@ -35,11 +35,11 @@ func TestDataDir_UsesDBPathEnv(t *testing.T) {
 }
 
 func TestHasMigration_AndLatest(t *testing.T) {
-	db, err := Open(filepath.Join(t.TempDir(), "easypour.db"))
+	db, err := Open(t.Context(), filepath.Join(t.TempDir(), "easypour.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	_, err = db.Exec(`
+	_, err = db.ExecContext(t.Context(), `
 		CREATE TABLE migrations (
 			id TEXT PRIMARY KEY,
 			applied_at DATETIME
@@ -69,23 +69,23 @@ func TestOpen_AndMigrateLegacy(t *testing.T) {
 	mustCreateLegacySettings(t, dir)
 
 	dbPath := filepath.Join(dir, "easypour.db")
-	db, err := Open(dbPath)
+	db, err := Open(t.Context(), dbPath)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	require.NoError(t, ApplySchema(db))
-	require.NoError(t, MigrateLegacy(db, dir))
+	require.NoError(t, ApplySchema(t.Context(), db))
+	require.NoError(t, MigrateLegacy(t.Context(), db, dir))
 
 	var menuCount, orderCount, cvarCount int
-	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM menu_items`).Scan(&menuCount))
-	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM orders`).Scan(&orderCount))
-	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM cvars`).Scan(&cvarCount))
+	require.NoError(t, db.QueryRowContext(t.Context(), `SELECT COUNT(*) FROM menu_items`).Scan(&menuCount))
+	require.NoError(t, db.QueryRowContext(t.Context(), `SELECT COUNT(*) FROM orders`).Scan(&orderCount))
+	require.NoError(t, db.QueryRowContext(t.Context(), `SELECT COUNT(*) FROM cvars`).Scan(&cvarCount))
 	assert.Equal(t, 1, menuCount)
 	assert.Equal(t, 1, orderCount)
 	assert.Equal(t, 1, cvarCount)
 
-	require.NoError(t, MigrateLegacy(db, dir))
-	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM menu_items`).Scan(&menuCount))
+	require.NoError(t, MigrateLegacy(t.Context(), db, dir))
+	require.NoError(t, db.QueryRowContext(t.Context(), `SELECT COUNT(*) FROM menu_items`).Scan(&menuCount))
 	assert.Equal(t, 1, menuCount)
 }
 
@@ -93,7 +93,7 @@ func TestMigrateLegacy_OrdersWithoutGroupID(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "orders.db"))
 	require.NoError(t, err)
-	_, err = db.Exec(`
+	_, err = db.ExecContext(t.Context(), `
 		CREATE TABLE orders (
 			id TEXT PRIMARY KEY, menu_item_id TEXT NOT NULL, username TEXT NOT NULL,
 			add_sugar INTEGER NOT NULL, add_milk INTEGER NOT NULL,
@@ -105,14 +105,14 @@ func TestMigrateLegacy_OrdersWithoutGroupID(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 
-	unified, err := Open(filepath.Join(dir, "easypour.db"))
+	unified, err := Open(t.Context(), filepath.Join(dir, "easypour.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = unified.Close() })
-	require.NoError(t, ApplySchema(unified))
-	require.NoError(t, MigrateLegacy(unified, dir))
+	require.NoError(t, ApplySchema(t.Context(), unified))
+	require.NoError(t, MigrateLegacy(t.Context(), unified, dir))
 
 	var groupID string
-	require.NoError(t, unified.QueryRow(`SELECT group_id FROM orders WHERE id = 'o1'`).Scan(&groupID))
+	require.NoError(t, unified.QueryRowContext(t.Context(), `SELECT group_id FROM orders WHERE id = 'o1'`).Scan(&groupID))
 	assert.Equal(t, "o1", groupID)
 }
 
@@ -120,8 +120,8 @@ func mustCreateLegacyMenu(t *testing.T, dir string) {
 	t.Helper()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "menu.db"))
 	require.NoError(t, err)
-	defer db.Close()
-	_, err = db.Exec(`
+	defer func() { _ = db.Close() }()
+	_, err = db.ExecContext(t.Context(), `
 		CREATE TABLE menu_items (
 			id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL,
 			supports_sugar INTEGER NOT NULL, supports_milk INTEGER NOT NULL,
@@ -136,8 +136,8 @@ func mustCreateLegacyOrders(t *testing.T, dir string) {
 	t.Helper()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "orders.db"))
 	require.NoError(t, err)
-	defer db.Close()
-	_, err = db.Exec(`
+	defer func() { _ = db.Close() }()
+	_, err = db.ExecContext(t.Context(), `
 		CREATE TABLE orders (
 			id TEXT PRIMARY KEY, menu_item_id TEXT NOT NULL, username TEXT NOT NULL,
 			add_sugar INTEGER NOT NULL, add_milk INTEGER NOT NULL,
@@ -154,8 +154,8 @@ func mustCreateLegacySettings(t *testing.T, dir string) {
 	t.Helper()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "settings.db"))
 	require.NoError(t, err)
-	defer db.Close()
-	_, err = db.Exec(`
+	defer func() { _ = db.Close() }()
+	_, err = db.ExecContext(t.Context(), `
 		CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 		CREATE TABLE cvars (
 			cvar_key TEXT NOT NULL PRIMARY KEY,

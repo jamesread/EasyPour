@@ -17,7 +17,7 @@ const (
 // Def is a catalog entry for a configuration variable.
 type Def struct {
 	Key, MainType, Title, Description, Category, ValueString string
-	Ordinal, ValueInt                                         int
+	Ordinal, ValueInt                                        int
 }
 
 // Defaults returns the built-in cvar catalog. siteTitle seeds site_title on first insert only.

@@ -1,0 +1,8 @@
+[
+  {"user": "sam",    "status": "preparing", "items": [{"menuItemId": "demo-flat-white", "addMilk": true, "addSugar": true, "sugarAmount": 1}, {"menuItemId": "demo-biscuits"}]},
+  {"user": "jordan", "status": "pending",   "items": [{"menuItemId": "demo-english-breakfast", "addMilk": true, "addSugar": true, "sugarAmount": 2}]},
+  {"user": "jordan", "status": "delivered", "items": [{"menuItemId": "demo-iced-lemonade", "addSugar": true, "sugarAmount": 1}]},
+  {"user": "alex",   "status": "pending",   "items": [{"menuItemId": "demo-flat-white", "addMilk": true}, {"menuItemId": "demo-toastie"}]},
+  {"user": "alex",   "status": "delivered", "items": [{"menuItemId": "demo-orange-juice"}]},
+  {"user": "sam",    "status": "pending",   "items": [{"menuItemId": "demo-hot-chocolate", "addMilk": true}]}
+]

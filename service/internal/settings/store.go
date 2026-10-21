@@ -3,6 +3,7 @@ package settings
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -40,11 +41,11 @@ func (s *Store) EnsureDefaultCvars(ctx context.Context, siteTitle string) error 
 }
 
 // Get returns the current settings (Apprise URL from cvars).
-func (s *Store) Get() (*Settings, error) {
+func (s *Store) Get(ctx context.Context) (*Settings, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("store not initialized")
 	}
-	row, err := s.FindCvar(context.Background(), cvar.KeyAppriseURL)
+	row, err := s.FindCvar(ctx, cvar.KeyAppriseURL)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (s *Store) Get() (*Settings, error) {
 }
 
 // Update persists settings (Apprise URL into the apprise_url cvar).
-func (s *Store) Update(in *Settings) error {
+func (s *Store) Update(ctx context.Context, in *Settings) error {
 	if s.db == nil {
 		return fmt.Errorf("store not initialized")
 	}
@@ -64,7 +65,7 @@ func (s *Store) Update(in *Settings) error {
 		return fmt.Errorf("settings required")
 	}
 	url := strings.TrimSpace(in.AppriseURL)
-	return s.UpdateCvar(context.Background(), cvar.KeyAppriseURL, 0, url)
+	return s.UpdateCvar(ctx, cvar.KeyAppriseURL, 0, url)
 }
 
 func (s *Store) migrateLegacyAppriseURL(ctx context.Context) error {
@@ -86,7 +87,7 @@ func (s *Store) copyLegacyIntoEmptyCvar(ctx context.Context, key, value string) 
 func (s *Store) readLegacyAppriseURL(ctx context.Context) (string, error) {
 	var legacy string
 	err := s.db.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, cvar.KeyAppriseURL).Scan(&legacy)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
 	if err != nil {

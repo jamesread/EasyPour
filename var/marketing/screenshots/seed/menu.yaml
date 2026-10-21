@@ -1,0 +1,44 @@
+# Fictional menu imported on first boot (the same path real installs use).
+items:
+  - id: demo-flat-white
+    name: Flat White
+    description: Double ristretto with velvety steamed milk
+    supports_sugar: true
+    supports_milk: true
+    category: Hot Drinks
+  - id: demo-english-breakfast
+    name: English Breakfast Tea
+    description: Strong black tea, brewed for three minutes
+    supports_sugar: true
+    supports_milk: true
+    category: Hot Drinks
+  - id: demo-hot-chocolate
+    name: Hot Chocolate
+    description: Rich cocoa topped with whipped cream
+    supports_sugar: false
+    supports_milk: true
+    category: Hot Drinks
+  - id: demo-iced-lemonade
+    name: Sparkling Lemonade
+    description: Fresh lemon, mint and soda over ice
+    supports_sugar: true
+    supports_milk: false
+    category: Cold Drinks
+  - id: demo-orange-juice
+    name: Orange Juice
+    description: Freshly squeezed, no bits
+    supports_sugar: false
+    supports_milk: false
+    category: Cold Drinks
+  - id: demo-toastie
+    name: Cheese Toastie
+    description: Mature cheddar on sourdough, toasted golden
+    supports_sugar: false
+    supports_milk: false
+    category: Snacks
+  - id: demo-biscuits
+    name: Shortbread Biscuits
+    description: A plate of three buttery shortbread fingers
+    supports_sugar: false
+    supports_milk: false
+    category: Snacks

@@ -1,0 +1,21 @@
+# Throwaway backend config for marketing screenshots. Every account uses the
+# fictional password "demo-password"; nothing here is a real credential.
+configVersion: 1
+
+auth:
+  localUsers:
+    enabled: true
+    users:
+      - username: "alex"
+        usergroup: "admin"
+        password: "$argon2id$v=19$m=65536,t=4,p=6$TkikyRvVnokNXBEAMQA20A$bpgqqssey4T3YCaS4FfLfRj6jktuNX0jK6C7VSetOtg"
+      - username: "sam"
+        usergroup: "staff"
+        password: "$argon2id$v=19$m=65536,t=4,p=6$TkikyRvVnokNXBEAMQA20A$bpgqqssey4T3YCaS4FfLfRj6jktuNX0jK6C7VSetOtg"
+      - username: "jordan"
+        usergroup: "staff"
+        password: "$argon2id$v=19$m=65536,t=4,p=6$TkikyRvVnokNXBEAMQA20A$bpgqqssey4T3YCaS4FfLfRj6jktuNX0jK6C7VSetOtg"
+
+webhooks: []
+
+oauthProviders: []

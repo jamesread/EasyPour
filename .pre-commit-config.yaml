@@ -1,0 +1,49 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(frontend/gen/|service/gen/|frontend/dist/)
+      - id: end-of-file-fixer
+        exclude: ^(frontend/gen/|service/gen/|frontend/dist/)
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix', 'lf']
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.2.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
+  - repo: local
+    hooks:
+      - id: service-codestyle
+        name: service-codestyle
+        entry: make -C service lint
+        language: system
+        pass_filenames: false
+        files: ^(service/|protocol/)
+      - id: service-unittests
+        name: service-unittests
+        entry: make -C service test
+        language: system
+        pass_filenames: false
+        files: ^(service/|protocol/|database/)
+      - id: frontend-codestyle
+        name: frontend-codestyle
+        entry: make -C frontend lint
+        language: system
+        pass_filenames: false
+        files: ^frontend/
+      - id: gauntlet
+        name: gauntlet (lint category)
+        entry: sh -c 'gnt status >/dev/null 2>&1 || exit 0; gnt run --fail-on error --category lint'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

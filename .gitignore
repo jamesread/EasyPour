@@ -12,6 +12,7 @@ vendor/
 *.out
 service/easypour-service
 service/service
+/easypour-service
 
 # Go
 go.work
@@ -47,3 +48,5 @@ coverage/
 *.cover
 
 integration-tests/node_modules/
+var/marketing/screenshots/tmp/
+__pycache__/

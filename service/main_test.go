@@ -11,6 +11,7 @@ import (
 
 	"easypour/service/buildinfo"
 	easypourv1 "easypour/service/gen/easypour/v1"
+	"easypour/service/internal/config"
 	"easypour/service/internal/sqlite"
 )
 
@@ -92,41 +93,40 @@ func TestTestAppriseNotification_RequiresAdmin(t *testing.T) {
 }
 
 func TestAssertMigration_MissingTable(t *testing.T) {
-	db, err := sqlite.Open(filepath.Join(t.TempDir(), "easypour.db"))
+	db, err := sqlite.Open(t.Context(), filepath.Join(t.TempDir(), "easypour.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	err = assertMigration(context.Background(), db, "0.base.sql")
+	err = assertMigration(t.Context(), db)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "run sql-migrate up")
 }
 
 func TestAssertMigration_WrongVersion(t *testing.T) {
-	db, err := sqlite.Open(filepath.Join(t.TempDir(), "easypour.db"))
+	db, err := sqlite.Open(t.Context(), filepath.Join(t.TempDir(), "easypour.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
-	_, err = db.Exec(`
+	_, err = db.ExecContext(t.Context(), `
 		CREATE TABLE migrations (id TEXT PRIMARY KEY, applied_at DATETIME);
 		INSERT INTO migrations (id, applied_at) VALUES ('old.sql', datetime('now'));
 	`)
 	require.NoError(t, err)
 
-	err = assertMigration(context.Background(), db, "0.base.sql")
+	err = assertMigration(t.Context(), db)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "requires database version 0.base.sql")
+	assert.Contains(t, err.Error(), "requires database version "+config.RequiredMigration)
 	assert.Contains(t, err.Error(), "old.sql")
 }
 
 func TestAssertMigration_OK(t *testing.T) {
-	db, err := sqlite.Open(filepath.Join(t.TempDir(), "easypour.db"))
+	db, err := sqlite.Open(t.Context(), filepath.Join(t.TempDir(), "easypour.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
-	_, err = db.Exec(`
+	_, err = db.ExecContext(t.Context(), `
 		CREATE TABLE migrations (id TEXT PRIMARY KEY, applied_at DATETIME);
-		INSERT INTO migrations (id, applied_at) VALUES ('0.base.sql', datetime('now'));
-	`)
+		INSERT INTO migrations (id, applied_at) VALUES (?, datetime('now'));
+	`, config.RequiredMigration)
 	require.NoError(t, err)
 
-	require.NoError(t, assertMigration(context.Background(), db, "0.base.sql"))
+	require.NoError(t, assertMigration(t.Context(), db))
 }
-

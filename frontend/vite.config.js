@@ -2,9 +2,11 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import pkg from './package.json'
+import pkg from './package.json' with { type: 'json' }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const backendTarget = `http://localhost:${process.env.PORT || 9654}`
+const backendPaths = ['/easypour.v1.EasyPourService', '/login', '/logout', '/upload', '/images', '/orders/events', '/metrics']
 
 export default defineConfig({
   resolve: {
@@ -23,31 +25,8 @@ export default defineConfig({
   server: {
     allowedHosts: ['localhost', 'mindstorm'],
     port: 3000,
-    proxy: {
-      '/easypour.v1.EasyPourService': {
-        target: 'http://localhost:9654',
-        changeOrigin: true,
-      },
-      '/login': {
-        target: 'http://localhost:9654',
-        changeOrigin: true,
-      },
-      '/logout': {
-        target: 'http://localhost:9654',
-        changeOrigin: true,
-      },
-      '/upload': {
-        target: 'http://localhost:9654',
-        changeOrigin: true,
-      },
-      '/images': {
-        target: 'http://localhost:9654',
-        changeOrigin: true,
-      },
-      '/orders/events': {
-        target: 'http://localhost:9654',
-        changeOrigin: true,
-      },
-    },
+    proxy: Object.fromEntries(
+      backendPaths.map((path) => [path, { target: backendTarget, changeOrigin: true }]),
+    ),
   },
 })

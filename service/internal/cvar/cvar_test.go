@@ -1,22 +1,21 @@
 package cvar
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
 func TestDefaultsHaveMetadata(t *testing.T) {
 	defs := Defaults("EasyPour")
-	if len(defs) == 0 {
-		t.Fatal("expected defaults")
-	}
+	require.NotEmpty(t, defs, "expected defaults")
 	seen := map[string]bool{}
 	for _, def := range defs {
 		assertDefMetadata(t, def, seen)
 	}
-	if !seen[KeySiteTitle] {
-		t.Fatal("missing site_title")
-	}
-	if !seen[KeyAppriseURL] {
-		t.Fatal("missing apprise_url")
-	}
+	assert.True(t, seen[KeySiteTitle], "missing site_title")
+	assert.True(t, seen[KeyAppriseURL], "missing apprise_url")
 }
 
 func TestDefaults_EmptySiteTitleUsesDefault(t *testing.T) {

@@ -1,13 +1,13 @@
 version: v2
 plugins:
-  - remote: buf.build/protocolbuffers/go
-    out: ../../service/gen
+  - remote: buf.build/protocolbuffers/go:v1.36.11
+    out: ../service/gen
     opt: paths=source_relative
 
-  - remote: buf.build/connectrpc/go
-    out: ../../service/gen
+  - remote: buf.build/connectrpc/go:v1.19.1
+    out: ../service/gen
     opt: paths=source_relative
 
-  - remote: buf.build/bufbuild/es
-    out: ../../frontend/gen
+  - remote: buf.build/bufbuild/es:v2.13.0
+    out: ../frontend/gen
     opt: target=ts

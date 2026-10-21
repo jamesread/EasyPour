@@ -1,1075 +1,126 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"database/sql"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sync"
-	"strings"
 	"time"
 
-	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	auth "github.com/jamesread/httpauthshim"
-	"github.com/sirupsen/logrus"
-	"github.com/jamesread/httpauthshim/authpublic"
 	"github.com/jamesread/httpauthshim/providers/haslocal"
-	"github.com/jamesread/httpauthshim/sessions"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-	"google.golang.org/protobuf/types/known/emptypb"
+	"github.com/sirupsen/logrus"
 
-	"easypour/service/buildinfo"
-	"easypour/service/internal/apprise"
+	easypourv1 "easypour/service/gen/easypour/v1"
+	"easypour/service/gen/easypour/v1/easypourv1connect"
 	"easypour/service/internal/config"
+	"easypour/service/internal/httpjson"
 	"easypour/service/internal/menu"
+	"easypour/service/internal/metrics"
 	"easypour/service/internal/order"
 	"easypour/service/internal/settings"
 	"easypour/service/internal/sqlite"
-	easypourv1 "easypour/service/gen/easypour/v1"
-	"easypour/service/gen/easypour/v1/easypourv1connect"
 )
 
-// orderEvent is sent to SSE clients on status update.
-type orderEvent struct {
-	Type    string `json:"type"`
-	OrderID string `json:"order_id"`
-	Status  string `json:"status"`
+// readHeaderTimeout guards against slow-header clients; no write timeout because /orders/events streams indefinitely.
+const readHeaderTimeout = 10 * time.Second
+
+type cliFlags struct {
+	hashPassword string
+	configDir    string
 }
 
-// sseBroadcaster sends order status updates to all connected SSE clients.
-type sseBroadcaster struct {
-	mu      sync.Mutex
-	clients map[chan []byte]struct{}
+func parseFlags() cliFlags {
+	hashPassword := flag.String("hash-password", "", "generate Argon2id hash for a password and exit (use in config.yaml auth.localUsers.users[].password)")
+	configDir := flag.String("configdir", "", "directory containing config.yaml (for integration tests)")
+	flag.Parse()
+	return cliFlags{hashPassword: *hashPassword, configDir: *configDir}
 }
 
-func newSSEBroadcaster() *sseBroadcaster {
-	return &sseBroadcaster{clients: make(map[chan []byte]struct{})}
-}
-
-func (b *sseBroadcaster) Subscribe() chan []byte {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	ch := make(chan []byte, 8)
-	b.clients[ch] = struct{}{}
-	return ch
-}
-
-func (b *sseBroadcaster) Unsubscribe(ch chan []byte) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	delete(b.clients, ch)
-	close(ch)
-}
-
-func (b *sseBroadcaster) Broadcast(data []byte) {
-	b.mu.Lock()
-	clients := make([]chan []byte, 0, len(b.clients))
-	for ch := range b.clients {
-		clients = append(clients, ch)
+func main() {
+	flags := parseFlags()
+	if flags.configDir != "" {
+		config.SetConfigDir(flags.configDir)
 	}
-	b.mu.Unlock()
-	for _, ch := range clients {
-		select {
-		case ch <- data:
-		default:
-		}
-	}
-}
-
-const sseKeepaliveInterval = 30 * time.Second
-
-// handleSSEOrderEvents serves GET /orders/events as text/event-stream; subscribes to broadcaster and sends keepalives every 30s.
-func handleSSEOrderEvents(broadcast *sseBroadcaster) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
-		flusher, ok := w.(http.Flusher)
-		if !ok {
-			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-			return
-		}
-		ch := broadcast.Subscribe()
-		defer broadcast.Unsubscribe(ch)
-		ctx := r.Context()
-		keepalive := time.NewTicker(sseKeepaliveInterval)
-		defer keepalive.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case data, ok := <-ch:
-				if !ok {
-					return
-				}
-				if _, err := w.Write(append(append([]byte("data: "), data...), '\n', '\n')); err != nil {
-					return
-				}
-				flusher.Flush()
-			case <-keepalive.C:
-				if _, err := w.Write([]byte(": keepalive\n\n")); err != nil {
-					return
-				}
-				flusher.Flush()
-			}
-		}
-	}
-}
-
-// EasyPourServer implements the EasyPourService
-type EasyPourServer struct {
-	easypourv1connect.UnimplementedEasyPourServiceHandler
-	authCtx        *auth.AuthShimContext
-	menuStore      *menu.Store
-	orderStore     *order.Store
-	settingsStore  *settings.Store
-	webhooks       []config.Webhook
-	webhookClient  *http.Client // skips TLS cert verification for webhook POSTs
-	oauthProviders []*easypourv1.OAuthProvider // configured OAuth2 providers for login form
-	sseBroadcast   *sseBroadcaster
-	appriseMu      sync.Mutex
-	appriseTimers  map[string]*time.Timer // debounce Apprise notify per order group
-}
-
-// Init returns app version, site title, features, and OAuth2 providers. Callable unauthenticated.
-func (s *EasyPourServer) Init(
-	ctx context.Context,
-	req *connect.Request[easypourv1.InitRequest],
-) (*connect.Response[easypourv1.InitResponse], error) {
-	resp := &easypourv1.InitResponse{
-		Version:   buildinfo.Version,
-		SiteTitle: s.siteTitle(ctx),
-		Features:  s.initFeatures(ctx),
-	}
-	if s.oauthProviders != nil {
-		resp.OauthProviders = s.oauthProviders
-	}
-	return connect.NewResponse(resp), nil
-}
-
-// GetMenu returns the available drinks menu from the YAML store
-func (s *EasyPourServer) GetMenu(
-	ctx context.Context,
-	req *connect.Request[easypourv1.GetMenuRequest],
-) (*connect.Response[easypourv1.GetMenuResponse], error) {
-	items, err := s.menuStore.Load()
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("load menu: %w", err))
-	}
-	return connect.NewResponse(&easypourv1.GetMenuResponse{Items: items}), nil
-}
-
-// webhookItem is a single item in the webhook payload's items array.
-type webhookItem struct {
-	MenuItemId  string `json:"menu_item_id"`
-	Name        string `json:"name,omitempty"`
-	AddSugar    bool   `json:"add_sugar"`
-	AddMilk     bool   `json:"add_milk"`
-	SugarAmount int32  `json:"sugar_amount"`
-	MilkAmount  int32  `json:"milk_amount"`
-}
-
-// orderWebhookPayload is the JSON body sent to webhook URLs when an order is submitted.
-type orderWebhookPayload struct {
-	OrderId     string        `json:"order_id"`
-	Status      string        `json:"status"`
-	CreatedAt   int64         `json:"created_at"`
-	OrderString string        `json:"order_string"`
-	Items       []webhookItem `json:"items"`
-}
-
-// formatWebhookItemString returns a short description for one item, e.g. "Coffee (no sugar, no milk)" or "Espresso (2 sugars, milk)".
-func formatWebhookItemString(name string, addSugar, addMilk bool, sugarAmount, milkAmount int32) string {
-	sugarPart := "no sugar"
-	if addSugar {
-		if sugarAmount <= 0 {
-			sugarAmount = 1
-		}
-		if sugarAmount == 1 {
-			sugarPart = "1 sugar"
-		} else {
-			sugarPart = fmt.Sprintf("%d sugars", sugarAmount)
-		}
-	}
-	milkPart := "no milk"
-	if addMilk {
-		milkPart = "milk"
-	}
-	return fmt.Sprintf("%s (%s, %s)", name, sugarPart, milkPart)
-}
-
-// getUsernameFromContext returns the authenticated username, or "" if auth disabled or guest.
-func (s *EasyPourServer) getUsernameFromContext(ctx context.Context) string {
-	if s.authCtx == nil {
-		return ""
-	}
-	httpReq, _ := ctx.Value(httpRequestKey).(*http.Request)
-	if httpReq == nil {
-		return ""
-	}
-	user := s.authCtx.AuthFromHttpReq(httpReq)
-	if user == nil || user.IsGuest() {
-		return ""
-	}
-	return user.Username
-}
-
-// requireAuth returns the authenticated user or error. Used by RPCs that need any logged-in user.
-func (s *EasyPourServer) requireAuth(ctx context.Context) (*authpublic.AuthenticatedUser, error) {
-	if s.authCtx == nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("auth required"))
-	}
-	httpReq, _ := ctx.Value(httpRequestKey).(*http.Request)
-	if httpReq == nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("request context missing"))
-	}
-	user := s.authCtx.AuthFromHttpReq(httpReq)
-	if user == nil || user.IsGuest() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("login required"))
-	}
-	return user, nil
-}
-
-// OrderDrink places an order for a drink and persists it with status "pending".
-func (s *EasyPourServer) OrderDrink(
-	ctx context.Context,
-	req *connect.Request[easypourv1.OrderRequest],
-) (*connect.Response[easypourv1.OrderResponse], error) {
-	orderReq := req.Msg
-
-	orderID := uuid.New().String()
-	username := s.getUsernameFromContext(ctx)
-	groupID := orderReq.GetGroupId()
-	if groupID == "" {
-		groupID = orderID
-	}
-
-	o := &order.Order{
-		ID:          orderID,
-		MenuItemID:  orderReq.MenuItemId,
-		Username:    username,
-		AddSugar:    orderReq.AddSugar,
-		AddMilk:     orderReq.AddMilk,
-		SugarAmount: orderReq.SugarAmount,
-		MilkAmount:  orderReq.MilkAmount,
-		Status:      "pending",
-		GroupID:     groupID,
-	}
-	if err := s.orderStore.Create(o); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create order: %w", err))
-	}
-
-	response := &easypourv1.OrderResponse{
-		OrderId:     o.ID,
-		MenuItemId:  o.MenuItemID,
-		AddSugar:    o.AddSugar,
-		AddMilk:     o.AddMilk,
-		SugarAmount: o.SugarAmount,
-		MilkAmount:  o.MilkAmount,
-		Status:      o.Status,
-		CreatedAt:   o.CreatedAt,
-		GroupId:     o.GroupID,
-	}
-
-	logrus.Infof("Order received: %s - item %s (Sugar: %v, Milk: %v)",
-		orderID, orderReq.MenuItemId, orderReq.AddSugar, orderReq.AddMilk)
-
-	itemName := orderReq.MenuItemId
-	if menuItems, err := s.menuStore.Load(); err == nil {
-		for _, it := range menuItems {
-			if it.Id == orderReq.MenuItemId {
-				itemName = it.Name
-				break
-			}
-		}
-	}
-	orderString := formatWebhookItemString(itemName, orderReq.AddSugar, orderReq.AddMilk, orderReq.SugarAmount, orderReq.MilkAmount)
-
-	// Send order details to configured webhooks (fire-and-forget, with retries)
-	nWebhooks := 0
-	for _, wh := range s.webhooks {
-		if wh.URL != "" {
-			nWebhooks++
-		}
-	}
-	if nWebhooks > 0 {
-		logrus.Infof("Sending order %s to %d webhook(s)", orderID, nWebhooks)
-		wi := webhookItem{
-			MenuItemId:  orderReq.MenuItemId,
-			Name:        itemName,
-			AddSugar:    orderReq.AddSugar,
-			AddMilk:     orderReq.AddMilk,
-			SugarAmount: orderReq.SugarAmount,
-			MilkAmount:  orderReq.MilkAmount,
-		}
-		payload := orderWebhookPayload{
-			OrderId:     orderID,
-			Status:      "pending",
-			CreatedAt:   o.CreatedAt,
-			OrderString: orderString,
-			Items:       []webhookItem{wi},
-		}
-		body, _ := json.Marshal(payload)
-		for _, wh := range s.webhooks {
-			if wh.URL == "" {
-				continue
-			}
-			url := wh.URL
-			bodyCopy := make([]byte, len(body))
-			copy(bodyCopy, body)
-			go func() {
-				s.postWebhookWithRetry(url, bodyCopy)
-			}()
-		}
-	}
-
-	s.scheduleAppriseGroupNotify(groupID, username)
-
-	return connect.NewResponse(response), nil
-}
-
-const (
-	webhookTimeout   = 15 * time.Second
-	webhookMaxRetries = 3
-	webhookBaseDelay  = 500 * time.Millisecond
-)
-
-// postWebhookWithRetry POSTs order payload to url with exponential backoff. Logs errors.
-func (s *EasyPourServer) postWebhookWithRetry(url string, body []byte) {
-	var lastErr error
-	for attempt := 0; attempt < webhookMaxRetries; attempt++ {
-		if attempt > 0 {
-			delay := webhookBaseDelay * (1 << (attempt - 1))
-			time.Sleep(delay)
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), webhookTimeout)
-		defer cancel()
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := s.webhookClient.Do(req)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		_, _ = io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
-		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			return
-		}
-		lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
-	}
-	logrus.Warnf("Webhook %s failed after %d attempts: %v", url, webhookMaxRetries, lastErr)
-}
-
-// scheduleAppriseGroupNotify coalesces notifications for a multi-item basket into one message.
-func (s *EasyPourServer) scheduleAppriseGroupNotify(groupID, username string) {
-	if groupID == "" || s.settingsStore == nil {
+	if flags.hashPassword != "" {
+		printPasswordHash(flags.hashPassword)
 		return
 	}
-	s.appriseMu.Lock()
-	defer s.appriseMu.Unlock()
-	if s.appriseTimers == nil {
-		s.appriseTimers = make(map[string]*time.Timer)
+	if err := run(context.Background()); err != nil {
+		logrus.Fatal(err)
 	}
-	if existing, ok := s.appriseTimers[groupID]; ok {
-		existing.Stop()
-	}
-	s.appriseTimers[groupID] = time.AfterFunc(appriseGroupSettle, func() {
-		s.appriseMu.Lock()
-		delete(s.appriseTimers, groupID)
-		s.appriseMu.Unlock()
-		s.sendAppriseGroupNotify(groupID, username)
-	})
 }
 
-const appriseGroupSettle = 500 * time.Millisecond
-
-// sendAppriseGroupNotify loads all items in the group and sends a single Apprise notification.
-func (s *EasyPourServer) sendAppriseGroupNotify(groupID, username string) {
-	cfg, err := s.settingsStore.Get()
-	if err != nil || cfg == nil || cfg.AppriseURL == "" {
-		if err != nil {
-			logrus.Warnf("Load settings for Apprise: %v", err)
-		}
-		return
-	}
-	members, err := s.orderStore.ListByGroupID(groupID)
+func printPasswordHash(password string) {
+	hash, err := haslocal.CreateHash(password)
 	if err != nil {
-		logrus.Warnf("List order group %s for Apprise: %v", groupID, err)
-		return
+		fmt.Fprintf(os.Stderr, "hash-password failed: %v\n", err)
+		os.Exit(1)
 	}
-	if len(members) == 0 {
-		return
-	}
-	nameByID := s.menuNameByID()
-	descriptions := make([]string, 0, len(members))
-	for _, o := range members {
-		name := o.MenuItemID
-		if n, ok := nameByID[o.MenuItemID]; ok && n != "" {
-			name = n
-		}
-		descriptions = append(descriptions, formatWebhookItemString(name, o.AddSugar, o.AddMilk, o.SugarAmount, o.MilkAmount))
-	}
-	if username == "" {
-		username = members[0].Username
-	}
-	payload := apprise.Payload{
-		Title: "New EasyPour order",
-		Body:  apprise.FormatOrderBody(groupID, descriptions, username),
-		Type:  "info",
-	}
-	url := cfg.AppriseURL
-	go func() {
-		if err := apprise.Notify(s.webhookClient, url, payload); err != nil {
-			logrus.Warnf("Apprise notify for order group %s: %v", groupID, err)
-		}
-	}()
+	fmt.Println(hash)
 }
 
-func (s *EasyPourServer) menuNameByID() map[string]string {
-	out := map[string]string{}
-	if s.menuStore == nil {
-		return out
-	}
-	items, err := s.menuStore.Load()
+func run(ctx context.Context) error {
+	appCfg := loadConfig()
+	authCtx, err := setupAuth(appCfg)
 	if err != nil {
-		return out
+		return fmt.Errorf("setup auth failed: %w", err)
 	}
-	for _, it := range items {
-		if it != nil && it.Id != "" {
-			out[it.Id] = it.Name
-		}
-	}
-	return out
+	defer shutdownAuth(authCtx)
+	return runWithAuth(ctx, appCfg, authCtx)
 }
 
-// GetSettings returns runtime settings (admin only).
-func (s *EasyPourServer) GetSettings(
-	ctx context.Context,
-	req *connect.Request[easypourv1.GetSettingsRequest],
-) (*connect.Response[easypourv1.GetSettingsResponse], error) {
-	if _, err := s.requireAdmin(ctx); err != nil {
-		return nil, err
-	}
-	if s.settingsStore == nil {
-		return connect.NewResponse(&easypourv1.GetSettingsResponse{
-			Settings: &easypourv1.Settings{},
-		}), nil
-	}
-	cfg, err := s.settingsStore.Get()
+func runWithAuth(ctx context.Context, appCfg *config.Config, authCtx *auth.AuthShimContext) error {
+	cfgPath := config.GetConfigPath()
+	db, err := openDatabase(ctx, cfgPath)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get settings: %w", err))
+		return err
 	}
-	return connect.NewResponse(&easypourv1.GetSettingsResponse{
-		Settings: &easypourv1.Settings{AppriseUrl: cfg.AppriseURL},
-	}), nil
-}
-
-// UpdateSettings updates runtime settings (admin only).
-func (s *EasyPourServer) UpdateSettings(
-	ctx context.Context,
-	req *connect.Request[easypourv1.UpdateSettingsRequest],
-) (*connect.Response[easypourv1.UpdateSettingsResponse], error) {
-	if _, err := s.requireAdmin(ctx); err != nil {
-		return nil, err
-	}
-	if s.settingsStore == nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("settings store unavailable"))
-	}
-	msg := req.Msg.GetSettings()
-	if msg == nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("settings required"))
-	}
-	in := &settings.Settings{AppriseURL: msg.GetAppriseUrl()}
-	if err := s.settingsStore.Update(in); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update settings: %w", err))
-	}
-	cfg, err := s.settingsStore.Get()
+	defer closeDatabase(db)
+	dataDir := sqlite.DataDir(cfgPath)
+	server, err := newServer(ctx, appCfg, authCtx, db, dataDir)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get settings: %w", err))
+		return err
 	}
-	return connect.NewResponse(&easypourv1.UpdateSettingsResponse{
-		Settings: &easypourv1.Settings{AppriseUrl: cfg.AppriseURL},
-	}), nil
+	return serve(newMux(server, authCtx, dataDir))
 }
 
-// TestAppriseNotification sends a test notification to the Apprise API (admin only).
-func (s *EasyPourServer) TestAppriseNotification(
-	ctx context.Context,
-	req *connect.Request[easypourv1.TestAppriseNotificationRequest],
-) (*connect.Response[easypourv1.TestAppriseNotificationResponse], error) {
-	if _, err := s.requireAdmin(ctx); err != nil {
-		return nil, err
+func loadConfig() *config.Config {
+	appCfg := config.LoadConfig()
+	if cfgPath := config.GetConfigPath(); cfgPath != "" {
+		logrus.Infof("Config loaded from %s; %d webhook(s) configured", cfgPath, len(appCfg.Webhooks))
+	} else {
+		logrus.Infof("No config file found; using defaults (%d webhooks)", len(appCfg.Webhooks))
 	}
-	url := strings.TrimSpace(req.Msg.GetAppriseUrl())
-	if url == "" {
-		resolved, err := s.savedAppriseURL()
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get settings: %w", err))
-		}
-		url = resolved
-	}
-	if url == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("apprise URL required"))
-	}
-	payload := apprise.Payload{
-		Title: "EasyPour test notification",
-		Body:  "This is a test notification from EasyPour.",
-		Type:  "info",
-	}
-	if err := apprise.Notify(s.webhookClient, url, payload); err != nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("apprise notify failed: %w", err))
-	}
-	return connect.NewResponse(&easypourv1.TestAppriseNotificationResponse{
-		Message: "Test notification sent.",
-	}), nil
+	return appCfg
 }
 
-func (s *EasyPourServer) savedAppriseURL() (string, error) {
-	if s.settingsStore == nil {
-		return "", nil
-	}
-	cfg, err := s.settingsStore.Get()
+func openDatabase(ctx context.Context, cfgPath string) (*sql.DB, error) {
+	db, err := sqlite.Open(ctx, sqlite.DBPath(cfgPath))
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("open database: %w", err)
 	}
-	if cfg == nil {
-		return "", nil
+	if err := assertMigration(ctx, db); err != nil {
+		closeDatabase(db)
+		return nil, fmt.Errorf("database migration check: %w", err)
 	}
-	return strings.TrimSpace(cfg.AppriseURL), nil
+	logDatabaseMigration(ctx, db)
+	return db, nil
 }
 
-// GetCurrentUser returns the authenticated user when auth is enabled (including is_admin for "admin" group),
-// and the list of configured OAuth2 providers for the login form. Callable unauthenticated to obtain providers.
-func (s *EasyPourServer) GetCurrentUser(
-	ctx context.Context,
-	req *connect.Request[easypourv1.GetCurrentUserRequest],
-) (*connect.Response[easypourv1.GetCurrentUserResponse], error) {
-	resp := &easypourv1.GetCurrentUserResponse{}
-	if s.oauthProviders != nil {
-		resp.OauthProviders = s.oauthProviders
-	}
-	if s.authCtx == nil {
-		return connect.NewResponse(resp), nil
-	}
-	httpReq, _ := ctx.Value(httpRequestKey).(*http.Request)
-	if httpReq == nil {
-		return connect.NewResponse(resp), nil
-	}
-	user := s.authCtx.AuthFromHttpReq(httpReq)
-	if user != nil && !user.IsGuest() {
-		resp.IsAuthenticated = true
-		resp.Username = user.Username
-		resp.IsAdmin = userInAdminGroup(user)
-	}
-	return connect.NewResponse(resp), nil
-}
-
-// userInAdminGroup returns true if the user's usergroups contain "admin"
-func userInAdminGroup(user *authpublic.AuthenticatedUser) bool {
-	for _, g := range strings.Split(user.UsergroupLine, ",") {
-		if strings.TrimSpace(strings.ToLower(g)) == "admin" {
-			return true
-		}
-	}
-	return false
-}
-
-// requireAdmin returns a permission-denied error if the request user is not in the admin group.
-func (s *EasyPourServer) requireAdmin(ctx context.Context) (*authpublic.AuthenticatedUser, error) {
-	if s.authCtx == nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("auth required"))
-	}
-	httpReq, _ := ctx.Value(httpRequestKey).(*http.Request)
-	if httpReq == nil {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("request context missing"))
-	}
-	user := s.authCtx.AuthFromHttpReq(httpReq)
-	if user == nil || user.IsGuest() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("login required"))
-	}
-	if !userInAdminGroup(user) {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("admin required"))
-	}
-	return user, nil
-}
-
-// CreateMenuItem adds a menu item (admin only)
-func (s *EasyPourServer) CreateMenuItem(
-	ctx context.Context,
-	req *connect.Request[easypourv1.CreateMenuItemRequest],
-) (*connect.Response[easypourv1.MenuItem], error) {
-	if _, err := s.requireAdmin(ctx); err != nil {
-		return nil, err
-	}
-	item := req.Msg.GetItem()
-	if item == nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("item required"))
-	}
-	created, err := s.menuStore.Create(item)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create menu item: %w", err))
-	}
-	return connect.NewResponse(created), nil
-}
-
-// UpdateMenuItem updates a menu item (admin only)
-func (s *EasyPourServer) UpdateMenuItem(
-	ctx context.Context,
-	req *connect.Request[easypourv1.UpdateMenuItemRequest],
-) (*connect.Response[easypourv1.MenuItem], error) {
-	if _, err := s.requireAdmin(ctx); err != nil {
-		return nil, err
-	}
-	item := req.Msg.GetItem()
-	if item == nil || item.Id == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("item with id required"))
-	}
-	updated, err := s.menuStore.Update(item)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("update menu item: %w", err))
-	}
-	return connect.NewResponse(updated), nil
-}
-
-// DeleteMenuItem removes a menu item by id (admin only)
-func (s *EasyPourServer) DeleteMenuItem(
-	ctx context.Context,
-	req *connect.Request[easypourv1.DeleteMenuItemRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	if _, err := s.requireAdmin(ctx); err != nil {
-		return nil, err
-	}
-	id := req.Msg.GetId()
-	if id == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("id required"))
-	}
-	if err := s.menuStore.Delete(id); err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("delete menu item: %w", err))
-	}
-	return connect.NewResponse(&emptypb.Empty{}), nil
-}
-
-// GetOrder returns a single order by id. Caller must own the order or be admin.
-func (s *EasyPourServer) GetOrder(
-	ctx context.Context,
-	req *connect.Request[easypourv1.GetOrderRequest],
-) (*connect.Response[easypourv1.GetOrderResponse], error) {
-	if _, err := s.requireAuth(ctx); err != nil {
-		return nil, err
-	}
-	orderID := req.Msg.GetOrderId()
-	if orderID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("order_id required"))
-	}
-	o, err := s.orderStore.Get(orderID)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get order: %w", err))
-	}
-	if o == nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("order not found"))
-	}
-	username := s.getUsernameFromContext(ctx)
-	if !userInAdminGroupFromContext(s.authCtx, ctx) && o.Username != username {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("not your order"))
-	}
-	return connect.NewResponse(&easypourv1.GetOrderResponse{Order: o.ToProto()}), nil
-}
-
-// ListOrders returns orders for the caller (own) or all orders if admin.
-func (s *EasyPourServer) ListOrders(
-	ctx context.Context,
-	req *connect.Request[easypourv1.ListOrdersRequest],
-) (*connect.Response[easypourv1.ListOrdersResponse], error) {
-	user, err := s.requireAuth(ctx)
-	if err != nil {
-		return nil, err
-	}
-	username := user.Username
-	isAdmin := userInAdminGroup(user)
-	list, err := s.orderStore.List(username, isAdmin)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list orders: %w", err))
-	}
-	orders := make([]*easypourv1.Order, 0, len(list))
-	for _, o := range list {
-		orders = append(orders, o.ToProto())
-	}
-	return connect.NewResponse(&easypourv1.ListOrdersResponse{Orders: orders}), nil
-}
-
-var allowedStatuses = map[string]bool{"pending": true, "preparing": true, "delivered": true}
-
-// validOrderStatusTransition returns true if the status change is allowed; pending→preparing is admin-only.
-func validOrderStatusTransition(from, to string, isAdmin bool) bool {
-	if !allowedStatuses[from] || !allowedStatuses[to] {
-		return false
-	}
-	if from == to {
-		return false
-	}
-	switch from {
-	case "pending":
-		if to == "preparing" {
-			return isAdmin
-		}
-		return to == "delivered"
-	case "preparing":
-		return to == "delivered"
-	case "delivered":
-		return false
-	default:
-		return false
+func closeDatabase(db *sql.DB) {
+	if err := db.Close(); err != nil {
+		logrus.Warnf("Close database: %v", err)
 	}
 }
 
-// canUpdateOrderStatus returns true if the user can set the order to the new status (admin can do pending->preparing; user can only set delivered on own order).
-func (s *EasyPourServer) canUpdateOrderStatus(ctx context.Context, o *order.Order, newStatus string) bool {
-	user, err := s.requireAuth(ctx)
-	if err != nil {
-		return false
-	}
-	isAdmin := userInAdminGroup(user)
-	if isAdmin {
-		return validOrderStatusTransition(o.Status, newStatus, true)
-	}
-	if o.Username != user.Username {
-		return false
-	}
-	return newStatus == "delivered" && validOrderStatusTransition(o.Status, "delivered", false)
-}
-
-// UpdateOrderStatus updates an order's status and broadcasts the change via SSE.
-func (s *EasyPourServer) UpdateOrderStatus(
-	ctx context.Context,
-	req *connect.Request[easypourv1.UpdateOrderStatusRequest],
-) (*connect.Response[easypourv1.UpdateOrderStatusResponse], error) {
-	if _, err := s.requireAuth(ctx); err != nil {
-		return nil, err
-	}
-	orderID := req.Msg.GetOrderId()
-	status := strings.TrimSpace(strings.ToLower(req.Msg.GetStatus()))
-	if orderID == "" || status == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("order_id and status required"))
-	}
-	if !allowedStatuses[status] {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("status must be pending, preparing, or delivered"))
-	}
-	o, err := s.orderStore.Get(orderID)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get order: %w", err))
-	}
-	if o == nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("order not found"))
-	}
-	if !s.canUpdateOrderStatus(ctx, o, status) {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("cannot update order status"))
-	}
-	updated, err := s.orderStore.UpdateStatus(orderID, status)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update status: %w", err))
-	}
-	if updated == nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("order not found"))
-	}
-	ev := orderEvent{Type: "status_update", OrderID: updated.ID, Status: updated.Status}
-	data, _ := json.Marshal(ev)
-	s.sseBroadcast.Broadcast(data)
-	return connect.NewResponse(&easypourv1.UpdateOrderStatusResponse{Order: updated.ToProto()}), nil
-}
-
-// userInAdminGroupFromContext returns true if the request user is in the admin group (for use when we already have ctx but not *AuthenticatedUser).
-func userInAdminGroupFromContext(authCtx *auth.AuthShimContext, ctx context.Context) bool {
-	if authCtx == nil {
-		return false
-	}
-	httpReq, _ := ctx.Value(httpRequestKey).(*http.Request)
-	if httpReq == nil {
-		return false
-	}
-	user := authCtx.AuthFromHttpReq(httpReq)
-	return user != nil && userInAdminGroup(user)
-}
-
-// context key for storing *http.Request (used by handlers that need auth identity)
-type contextKey string
-
-const httpRequestKey contextKey = "httpRequest"
-
-// handleUpload accepts POST multipart/form-data with "image" file; requires admin. Saves to imagesDir, returns {"url": "/images/filename"}.
-func handleUpload(authCtx *auth.AuthShimContext, imagesDir string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		user := authCtx.AuthFromHttpReq(r)
-		if user == nil || user.IsGuest() {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		if !userInAdminGroup(user) {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
-		}
-		if err := os.MkdirAll(imagesDir, 0755); err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MiB
-			http.Error(w, "Bad request", http.StatusBadRequest)
-			return
-		}
-		file, header, err := r.FormFile("image")
-		if err != nil {
-			http.Error(w, "missing or invalid image field", http.StatusBadRequest)
-			return
-		}
-		defer file.Close()
-		ext := filepath.Ext(header.Filename)
-		if ext == "" {
-			ext = ".jpg"
-		}
-		filename := uuid.New().String() + ext
-		path := filepath.Join(imagesDir, filename)
-		dest, err := os.Create(path)
-		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		defer dest.Close()
-		if _, err := io.Copy(dest, file); err != nil {
-			os.Remove(path)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"url": "/images/" + filename})
-	}
-}
-
-// withAuth wraps an http.Handler with httpauthshim authentication (session-based).
-// Unauthenticated requests receive 401 without WWW-Authenticate so the browser does not show Basic auth.
-// GetCurrentUser is allowed without auth so the login form can fetch the user and OAuth provider list.
-func withAuth(authCtx *auth.AuthShimContext, h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == easypourv1connect.EasyPourServiceInitProcedure ||
-			r.URL.Path == easypourv1connect.EasyPourServiceGetCurrentUserProcedure {
-			ctx := context.WithValue(r.Context(), httpRequestKey, r)
-			h.ServeHTTP(w, r.WithContext(ctx))
-			return
-		}
-		user := authCtx.AuthFromHttpReq(r)
-		if user == nil || user.IsGuest() {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		ctx := context.WithValue(r.Context(), httpRequestKey, r)
-		h.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-// loginRequest is the JSON body for POST /login
-type loginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-// loginOrSPA handles /login: POST goes to handleLogin; GET/HEAD when spa is set serves index.html
-// so auth redirects to /login still load the SPA instead of 405.
-func loginOrSPA(authCtx *auth.AuthShimContext, spa http.Handler) http.Handler {
-	login := handleLogin(authCtx)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			login(w, r)
-			return
-		}
-		if (r.Method == http.MethodGet || r.Method == http.MethodHead) && spa != nil {
-			r = r.Clone(r.Context())
-			r.URL.Path = "/"
-			spa.ServeHTTP(w, r)
-			return
-		}
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	})
-}
-
-// handleLogin handles POST /login for session-based auth. Validates username/password,
-// creates a session, and sets the session cookie.
-func handleLogin(authCtx *auth.AuthShimContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		var req loginRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Bad request", http.StatusBadRequest)
-			return
-		}
-		username := strings.TrimSpace(req.Username)
-		password := strings.TrimSpace(req.Password)
-		if username == "" || password == "" {
-			http.Error(w, "username and password required", http.StatusBadRequest)
-			return
-		}
-		if !haslocal.CheckUserPassword(authCtx.Config, username, password) {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		cfgUser := authCtx.Config.FindUserByUsername(username)
-		usergroup := ""
-		if cfgUser != nil {
-			usergroup = cfgUser.UsergroupLine
-		}
-		sid := uuid.New().String()
-		authCtx.RegisterUserSession("local", sid, username, strings.Split(usergroup, ",")...)
-		cookieName := authCtx.Config.GetLocalSessionCookieName()
-		http.SetCookie(w, &http.Cookie{
-			Name:     cookieName,
-			Value:    sid,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   7 * 24 * 3600, // 7 days
-		})
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"username": username})
-	}
-}
-
-// handleLogout clears the session cookie so the client is logged out.
-func handleLogout(authCtx *auth.AuthShimContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		cookieName := authCtx.Config.GetLocalSessionCookieName()
-		http.SetCookie(w, &http.Cookie{
-			Name:     cookieName,
-			Value:    "",
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   -1,
-		})
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"ok": "true"})
-	}
-}
-
-// getStaticDir returns EASYPOUR_STATIC_DIR if set and the directory exists; otherwise "".
-func getStaticDir() string {
-	dir := os.Getenv("EASYPOUR_STATIC_DIR")
-	if dir == "" {
-		return ""
-	}
-	abs, err := filepath.Abs(dir)
-	if err != nil {
-		return ""
-	}
-	fi, err := os.Stat(abs)
-	if err != nil || !fi.IsDir() {
-		return ""
-	}
-	return abs
-}
-
-// spaFileServer serves files from root and falls back to index.html for GET/HEAD
-// so SPA client-side routing works when the user navigates or refreshes.
-func spaFileServer(root string) http.Handler {
-	fs := http.FileServer(http.Dir(root))
-	rootAbs, _ := filepath.Abs(root)
-	indexPath := filepath.Join(root, "index.html")
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet && r.Method != http.MethodHead {
-			http.NotFound(w, r)
-			return
-		}
-		path := filepath.Clean(r.URL.Path)
-		if path == "" || path == "." || path == "/" {
-			// Serve index.html directly; do not use FileServer for it because
-			// FileServer redirects /index.html to ./ (301), which breaks / and /./
-			f, err := os.Open(indexPath)
-			if err != nil {
-				http.NotFound(w, r)
-				return
-			}
-			defer f.Close()
-			fi, err := f.Stat()
-			if err != nil || fi.IsDir() {
-				http.NotFound(w, r)
-				return
-			}
-			http.ServeContent(w, r, "index.html", fi.ModTime(), f)
-			return
-		}
-		if path[0] != '/' {
-			path = "/" + path
-		}
-		fpath := filepath.Join(root, path)
-		fpathAbs, err := filepath.Abs(fpath)
-		if err != nil || !strings.HasPrefix(fpathAbs+string(filepath.Separator), rootAbs+string(filepath.Separator)) {
-			r = r.Clone(r.Context())
-			r.URL.Path = "/index.html"
-			fs.ServeHTTP(w, r)
-			return
-		}
-		fi, err := os.Stat(fpath)
-		if err == nil && fi.Mode().IsRegular() {
-			fs.ServeHTTP(w, r)
-			return
-		}
-		r = r.Clone(r.Context())
-		r.URL.Path = "/index.html"
-		fs.ServeHTTP(w, r)
-	})
-}
-
-// setupAuth creates an AuthShimContext from the given config when auth is enabled.
-// Returns nil when auth is disabled or misconfigured.
-func setupAuth(appConfig *config.Config) (*auth.AuthShimContext, error) {
-	if appConfig == nil || appConfig.Auth == nil {
-		return nil, nil
-	}
-	authCfg := appConfig.Auth
-	if !authCfg.LocalUsers.Enabled {
-		return nil, nil
-	}
-	if len(authCfg.LocalUsers.Users) == 0 {
-		logrus.Warn("Auth enabled but no users configured; auth disabled")
-		return nil, nil
-	}
-	sessionStorage := sessions.NewSessionStorage(sessions.NewYAMLPersistence())
-	authCtx, err := auth.NewAuthShimContext(authCfg, sessionStorage)
-	if err != nil {
-		return nil, err
-	}
-	authCtx.AddProvider(haslocal.CheckUserFromLocalSession)
-	logrus.Info("Authentication enabled (httpauthshim, session-based login)")
-	return authCtx, nil
-}
-
-func assertMigration(ctx context.Context, db *sql.DB, required string) error {
-	ok, err := sqlite.HasMigration(ctx, db, required)
+// assertMigration fails startup unless config.RequiredMigration has been applied by sql-migrate.
+func assertMigration(ctx context.Context, db *sql.DB) error {
+	ok, err := sqlite.HasMigration(ctx, db, config.RequiredMigration)
 	if err != nil {
 		return fmt.Errorf("connected to the database, but the migrations table could not be queried. run sql-migrate up: %w", err)
 	}
@@ -1080,7 +131,7 @@ func assertMigration(ctx context.Context, db *sql.DB, required string) error {
 	if latest == "" {
 		latest = "null"
 	}
-	return fmt.Errorf("requires database version %s but the database is at version %s; run database migrations", required, latest)
+	return fmt.Errorf("requires database version %s but the database is at version %s; run database migrations", config.RequiredMigration, latest)
 }
 
 func logDatabaseMigration(ctx context.Context, db *sql.DB) {
@@ -1095,136 +146,100 @@ func logDatabaseMigration(ctx context.Context, db *sql.DB) {
 	logrus.Infof("Database migration: %s", latest)
 }
 
-func main() {
-	hashPassword := flag.String("hash-password", "", "generate Argon2id hash for a password and exit (use in config.yaml auth.localUsers.users[].password)")
-	configDir := flag.String("configdir", "", "directory containing config.yaml (for integration tests)")
-	flag.Parse()
-	if *configDir != "" {
-		config.SetConfigDir(*configDir)
-	}
-	if *hashPassword != "" {
-		hash, err := haslocal.CreateHash(*hashPassword)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "hash-password failed: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println(hash)
-		os.Exit(0)
-	}
-
-	appCfg := config.LoadConfig()
-	cfgPath := config.GetConfigPath()
-	if cfgPath != "" {
-		logrus.Infof("Config loaded from %s; %d webhook(s) configured", cfgPath, len(appCfg.Webhooks))
-	} else {
-		logrus.Infof("No config file found; using defaults (%d webhooks)", len(appCfg.Webhooks))
-	}
-
-	authCtx, err := setupAuth(appCfg)
-	if err != nil {
-		logrus.Fatalf("Setup auth failed: %v", err)
-	}
-	if authCtx != nil {
-		defer func() {
-			if err := authCtx.Shutdown(); err != nil {
-				logrus.Warnf("Auth shutdown error: %v", err)
-			}
-		}()
-	}
-
-	dataDir := sqlite.DataDir(cfgPath)
-	db, err := sqlite.Open(sqlite.DBPath(cfgPath))
-	if err != nil {
-		logrus.Fatalf("Open database: %v", err)
-	}
-	defer db.Close()
-
-	ctx := context.Background()
-	if err := assertMigration(ctx, db, config.RequiredMigration); err != nil {
-		logrus.Fatalf("Database migration check: %v", err)
-	}
-	logDatabaseMigration(ctx, db)
-
+func newServer(ctx context.Context, appCfg *config.Config, authCtx *auth.AuthShimContext, db *sql.DB, dataDir string) (*EasyPourServer, error) {
 	menuStore := menu.NewStore(db, dataDir)
-	orderStore := order.NewStore(db)
 	settingsStore := settings.NewStore(db)
-
-	if err := sqlite.MigrateLegacy(db, dataDir); err != nil {
-		logrus.Fatalf("Migrate legacy databases: %v", err)
+	if err := prepareData(ctx, db, dataDir, menuStore, settingsStore); err != nil {
+		return nil, err
 	}
-	if err := menuStore.SeedIfEmpty(); err != nil {
-		logrus.Fatalf("Seed menu: %v", err)
-	}
-	if err := settingsStore.EnsureDefaultCvars(ctx, "EasyPour"); err != nil {
-		logrus.Fatalf("Ensure default cvars: %v", err)
-	}
-
-	sseBroadcast := newSSEBroadcaster()
-
-	webhookClient := &http.Client{
-		Timeout: webhookTimeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-	var oauthProviders []*easypourv1.OAuthProvider
-	for _, p := range appCfg.OAuthProviders {
-		if p.ID != "" && p.Name != "" && p.AuthURL != "" {
-			oauthProviders = append(oauthProviders, &easypourv1.OAuthProvider{
-				Id:      p.ID,
-				Name:    p.Name,
-				AuthUrl: p.AuthURL,
-			})
-		}
-	}
-	server := &EasyPourServer{
+	return &EasyPourServer{
 		authCtx:        authCtx,
 		menuStore:      menuStore,
-		orderStore:     orderStore,
+		orderStore:     order.NewStore(db),
 		settingsStore:  settingsStore,
 		webhooks:       appCfg.Webhooks,
-		webhookClient:  webhookClient,
-		oauthProviders: oauthProviders,
-		sseBroadcast:   sseBroadcast,
+		webhookClient:  newWebhookClient(),
+		oauthProviders: oauthProvidersFromConfig(appCfg.OAuthProviders),
+		sseBroadcast:   newSSEBroadcaster(),
+	}, nil
+}
+
+func prepareData(ctx context.Context, db *sql.DB, dataDir string, menuStore *menu.Store, settingsStore *settings.Store) error {
+	if err := sqlite.MigrateLegacy(ctx, db, dataDir); err != nil {
+		return fmt.Errorf("migrate legacy databases: %w", err)
 	}
+	if err := menuStore.SeedIfEmpty(ctx); err != nil {
+		return fmt.Errorf("seed menu: %w", err)
+	}
+	if err := settingsStore.EnsureDefaultCvars(ctx, "EasyPour"); err != nil {
+		return fmt.Errorf("ensure default cvars: %w", err)
+	}
+	return nil
+}
+
+// newWebhookClient skips TLS verification because webhook and Apprise targets are commonly
+// self-hosted on a LAN with self-signed certificates.
+func newWebhookClient() *http.Client {
+	return &http.Client{
+		Timeout: httpjson.DefaultTimeout,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // see function comment
+		},
+	}
+}
+
+func oauthProvidersFromConfig(cfgs []config.OAuthProviderConfig) []*easypourv1.OAuthProvider {
+	var providers []*easypourv1.OAuthProvider
+	for _, p := range cfgs {
+		if isCompleteOAuthProvider(p) {
+			providers = append(providers, &easypourv1.OAuthProvider{Id: p.ID, Name: p.Name, AuthUrl: p.AuthURL})
+		}
+	}
+	return providers
+}
+
+func isCompleteOAuthProvider(p config.OAuthProviderConfig) bool {
+	return p.ID != "" && p.Name != "" && p.AuthURL != ""
+}
+
+func newMux(server *EasyPourServer, authCtx *auth.AuthShimContext, dataDir string) *http.ServeMux {
 	mux := http.NewServeMux()
-	staticDir := getStaticDir()
-	var spaHandler http.Handler
-	if staticDir != "" {
-		spaHandler = spaFileServer(staticDir)
-		logrus.Infof("Serving frontend from %s", staticDir)
-	}
-	if authCtx != nil {
-		mux.Handle("/login", loginOrSPA(authCtx, spaHandler))
-		mux.HandleFunc("/logout", handleLogout(authCtx))
-		imagesDir := filepath.Join(dataDir, "images")
-		mux.HandleFunc("/upload", handleUpload(authCtx, imagesDir))
-		mux.Handle("/images/", http.StripPrefix("/images", http.FileServer(http.Dir(imagesDir))))
-		mux.Handle("/orders/events", withAuth(authCtx, handleSSEOrderEvents(sseBroadcast)))
-	} else {
-		mux.Handle("/orders/events", handleSSEOrderEvents(sseBroadcast))
-	}
+	mux.Handle("/metrics", metrics.Handler())
+	spa := newSPAHandler()
+	registerAuthRoutes(mux, authCtx, spa, dataDir)
+	mux.Handle("/orders/events", requireSession(authCtx, server.sseBroadcast))
 	path, handler := easypourv1connect.NewEasyPourServiceHandler(server)
-	if authCtx != nil {
-		mux.Handle(path, withAuth(authCtx, handler))
-	} else {
-		mux.Handle(path, handler)
+	mux.Handle(path, requireSession(authCtx, handler))
+	logrus.Infof("ConnectRPC endpoint: %s", path)
+	if spa != nil {
+		mux.Handle("/", spa)
 	}
-	if spaHandler != nil {
-		mux.Handle("/", spaHandler)
-	}
+	return mux
+}
 
+func registerAuthRoutes(mux *http.ServeMux, authCtx *auth.AuthShimContext, spa http.Handler, dataDir string) {
+	if authCtx == nil {
+		return
+	}
+	imagesDir := filepath.Join(dataDir, "images")
+	mux.Handle("/login", loginOrSPA(authCtx, spa))
+	mux.HandleFunc("/logout", handleLogout(authCtx))
+	mux.HandleFunc("/upload", handleUpload(authCtx, imagesDir))
+	mux.Handle("/images/", http.StripPrefix("/images", http.FileServer(http.Dir(imagesDir))))
+	logrus.Info("API requires authentication (HTTP Basic or configured providers)")
+}
+
+func serve(handler http.Handler) error {
 	addr := config.ListenAddr()
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: readHeaderTimeout,
+		Protocols:         protocols,
+	}
 	logrus.Infof("Starting EasyPour service on %s", addr)
-	logrus.Infof("ConnectRPC endpoint: http://localhost%s%s", addr, path)
-	if authCtx != nil {
-		logrus.Info("API requires authentication (HTTP Basic or configured providers)")
-	}
-
-	if err := http.ListenAndServe(
-		addr,
-		h2c.NewHandler(mux, &http2.Server{}),
-	); err != nil {
-		logrus.Fatalf("Server failed to start: %v", err)
-	}
+	return fmt.Errorf("server failed to start: %w", srv.ListenAndServe())
 }

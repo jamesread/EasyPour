@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -45,12 +46,12 @@ func dirForDBPath(dbPath, configPath string) string {
 }
 
 // Open opens (or creates) the SQLite database at dbPath.
-func Open(dbPath string) (*sql.DB, error) {
+func Open(ctx context.Context, dbPath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
-	if _, err := db.Exec(`PRAGMA foreign_keys = ON`); err != nil {
+	if _, err := db.ExecContext(ctx, `PRAGMA foreign_keys = ON`); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("pragma foreign_keys: %w", err)
 	}
@@ -79,8 +80,8 @@ func LatestMigration(ctx context.Context, db *sql.DB) (string, error) {
 }
 
 // ApplySchema creates tables and indexes for unit tests (production uses sql-migrate).
-func ApplySchema(db *sql.DB) error {
-	_, err := db.Exec(`
+func ApplySchema(ctx context.Context, db *sql.DB) error {
+	_, err := db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS menu_items (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
@@ -126,37 +127,37 @@ func ApplySchema(db *sql.DB) error {
 
 // MigrateLegacy copies data from older per-domain DB files into the unified DB when present.
 // Existing rows in the destination are left unchanged (INSERT OR IGNORE).
-func MigrateLegacy(db *sql.DB, dataDir string) error {
-	if err := migrateMenu(db, filepath.Join(dataDir, "menu.db")); err != nil {
+func MigrateLegacy(ctx context.Context, db *sql.DB, dataDir string) error {
+	if err := migrateMenu(ctx, db, filepath.Join(dataDir, "menu.db")); err != nil {
 		return err
 	}
-	if err := migrateOrders(db, filepath.Join(dataDir, "orders.db")); err != nil {
+	if err := migrateOrders(ctx, db, filepath.Join(dataDir, "orders.db")); err != nil {
 		return err
 	}
-	return migrateSettings(db, filepath.Join(dataDir, "settings.db"))
+	return migrateSettings(ctx, db, filepath.Join(dataDir, "settings.db"))
 }
 
-func migrateMenu(db *sql.DB, path string) error {
-	return withAttached(db, path, "legacy_menu", func(db *sql.DB) error {
-		_, err := db.Exec(`INSERT OR IGNORE INTO menu_items SELECT * FROM legacy_menu.menu_items`)
+func migrateMenu(ctx context.Context, db *sql.DB, path string) error {
+	return withAttached(ctx, db, path, "legacy_menu", func(ctx context.Context, db *sql.DB) error {
+		_, err := db.ExecContext(ctx, `INSERT OR IGNORE INTO menu_items SELECT * FROM legacy_menu.menu_items`)
 		return err
 	})
 }
 
-func migrateOrders(db *sql.DB, path string) error {
-	return withAttached(db, path, "legacy_orders", copyOrdersFromLegacy)
+func migrateOrders(ctx context.Context, db *sql.DB, path string) error {
+	return withAttached(ctx, db, path, "legacy_orders", copyOrdersFromLegacy)
 }
 
-func copyOrdersFromLegacy(db *sql.DB) error {
-	hasGroup, err := columnExists(db, "legacy_orders", "orders", "group_id")
+func copyOrdersFromLegacy(ctx context.Context, db *sql.DB) error {
+	hasGroup, err := columnExists(ctx, db, "legacy_orders", "orders", "group_id")
 	if err != nil {
 		return err
 	}
 	if hasGroup {
-		_, err = db.Exec(`INSERT OR IGNORE INTO orders SELECT * FROM legacy_orders.orders`)
+		_, err = db.ExecContext(ctx, `INSERT OR IGNORE INTO orders SELECT * FROM legacy_orders.orders`)
 		return err
 	}
-	_, err = db.Exec(`
+	_, err = db.ExecContext(ctx, `
 		INSERT OR IGNORE INTO orders (
 			id, menu_item_id, username, add_sugar, add_milk, sugar_amount, milk_amount,
 			status, created_at, updated_at, group_id
@@ -168,37 +169,37 @@ func copyOrdersFromLegacy(db *sql.DB) error {
 	return err
 }
 
-func migrateSettings(db *sql.DB, path string) error {
-	return withAttached(db, path, "legacy_settings", copySettingsFromLegacy)
+func migrateSettings(ctx context.Context, db *sql.DB, path string) error {
+	return withAttached(ctx, db, path, "legacy_settings", copySettingsFromLegacy)
 }
 
-func copySettingsFromLegacy(db *sql.DB) error {
-	if err := copyTableIfPresent(db, "legacy_settings", "settings",
+func copySettingsFromLegacy(ctx context.Context, db *sql.DB) error {
+	if err := copyTableIfPresent(ctx, db, "legacy_settings", "settings",
 		`INSERT OR IGNORE INTO settings SELECT * FROM legacy_settings.settings`); err != nil {
 		return err
 	}
-	return copyTableIfPresent(db, "legacy_settings", "cvars",
+	return copyTableIfPresent(ctx, db, "legacy_settings", "cvars",
 		`INSERT OR IGNORE INTO cvars SELECT * FROM legacy_settings.cvars`)
 }
 
-func copyTableIfPresent(db *sql.DB, schema, table, copySQL string) error {
-	ok, err := tableExists(db, schema, table)
+func copyTableIfPresent(ctx context.Context, db *sql.DB, schema, table, copySQL string) error {
+	ok, err := tableExists(ctx, db, schema, table)
 	if err != nil || !ok {
 		return err
 	}
-	_, err = db.Exec(copySQL)
+	_, err = db.ExecContext(ctx, copySQL)
 	return err
 }
 
-func withAttached(db *sql.DB, legacyPath, schema string, fn func(*sql.DB) error) error {
+func withAttached(ctx context.Context, db *sql.DB, legacyPath, schema string, fn func(context.Context, *sql.DB) error) error {
 	if !fileExists(legacyPath) {
 		return nil
 	}
-	if _, err := db.Exec(fmt.Sprintf(`ATTACH DATABASE %q AS %s`, legacyPath, schema)); err != nil {
+	if _, err := db.ExecContext(ctx, fmt.Sprintf(`ATTACH DATABASE %q AS %s`, legacyPath, schema)); err != nil {
 		return fmt.Errorf("attach %s: %w", legacyPath, err)
 	}
-	fnErr := fn(db)
-	_, detachErr := db.Exec(fmt.Sprintf(`DETACH DATABASE %s`, schema))
+	fnErr := fn(ctx, db)
+	_, detachErr := db.ExecContext(ctx, fmt.Sprintf(`DETACH DATABASE %s`, schema))
 	return firstErr(wrapMigrate(legacyPath, fnErr), wrapDetach(schema, detachErr))
 }
 
@@ -230,20 +231,20 @@ func firstErr(errs ...error) error {
 	return nil
 }
 
-func tableExists(db *sql.DB, schema, table string) (bool, error) {
+func tableExists(ctx context.Context, db *sql.DB, schema, table string) (bool, error) {
 	var name string
-	err := db.QueryRow(
+	err := db.QueryRowContext(ctx,
 		fmt.Sprintf(`SELECT name FROM %s.sqlite_master WHERE type = 'table' AND name = ?`, schema),
 		table,
 	).Scan(&name)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
 	return err == nil, err
 }
 
-func columnExists(db *sql.DB, schema, table, column string) (bool, error) {
-	rows, err := db.Query(fmt.Sprintf(`PRAGMA %s.table_info(%s)`, schema, table))
+func columnExists(ctx context.Context, db *sql.DB, schema, table, column string) (bool, error) {
+	rows, err := db.QueryContext(ctx, fmt.Sprintf(`PRAGMA %s.table_info(%s)`, schema, table))
 	if err != nil {
 		return false, err
 	}

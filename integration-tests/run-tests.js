@@ -29,7 +29,11 @@ function runMigrations() {
 
 async function main() {
   runMigrations()
-  const env = { ...process.env, EASYPOUR_BASE_URL: 'http://localhost:9654' }
+  const env = {
+    ...process.env,
+    EASYPOUR_BASE_URL: 'http://localhost:9654',
+    EASYPOUR_STATIC_DIR: join(repoRoot, 'frontend', 'dist'),
+  }
   const child = spawn(serviceBin, ['-configdir', testsDir], {
     cwd: join(repoRoot, 'service'),
     env,
@@ -61,7 +65,7 @@ async function main() {
     }, 2000)
   })
   await waitForServer
-  const mocha = spawn('npx', ['mocha', '--timeout', '30000', 'tests/init.spec.js'], {
+  const mocha = spawn('npx', ['mocha', '--timeout', '30000', 'tests/**/*.spec.js'], {
     cwd: __dirname,
     env: { ...process.env, EASYPOUR_BASE_URL: 'http://localhost:9654' },
     stdio: 'inherit',

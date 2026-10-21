@@ -1,36 +1,36 @@
-.PHONY: all generate build test lint install setup migrate dev-service dev-frontend service frontend integration-test
+.PHONY: all generate build test lint install setup migrate dev-service dev-frontend service frontend integration-test screenshots
 
 # Default: build project and all subdirectories
 all: build
 
 # Generate protocol code (Go + TS)
 generate:
-	cd protocol/proto && buf generate --template ../buf.gen.yaml
+	$(MAKE) -wC protocol
 
 # Build service and frontend
 build: service frontend
 
 # Build the Go service
 service:
-	$(MAKE) -C service build
+	$(MAKE) -wC service build
 
 # Build the frontend
 frontend:
-	$(MAKE) -C frontend build
+	$(MAKE) -wC frontend build
 
 # Apply SQLite migrations (set DB_PATH to the easypour.db file)
 migrate:
-	$(MAKE) -C database/sqlite
+	$(MAKE) -wC database/sqlite
 
 # Run all tests
 test: generate
-	$(MAKE) -C service test
-	$(MAKE) -C frontend test
+	$(MAKE) -wC service test
+	$(MAKE) -wC frontend test
 
 # Run linters
 lint:
-	$(MAKE) -C service lint
-	$(MAKE) -C frontend lint
+	$(MAKE) -wC service lint
+	$(MAKE) -wC frontend lint
 
 # Install dependencies
 install:
@@ -43,12 +43,16 @@ setup: install generate
 
 # Run the Go service (development)
 dev-service:
-	$(MAKE) -C service run
+	$(MAKE) -wC service run
 
 # Run the frontend dev server
 dev-frontend:
-	$(MAKE) -C frontend run
+	$(MAKE) -wC frontend run
 
 # Run integration tests (builds service, starts backend with -configdir, runs mocha)
-integration-test: service
+integration-test: service frontend
 	cd integration-tests && npm install && node run-tests.js
+
+# Regenerate marketing screenshots (needs Chrome + chromedriver; not part of `all`)
+screenshots:
+	$(MAKE) -wC var/marketing/screenshots

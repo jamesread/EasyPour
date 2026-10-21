@@ -1,7 +1,9 @@
 package order
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -37,24 +39,15 @@ func NewStore(db *sql.DB) *Store {
 
 // Create persists an order. Order.ID must be set; CreatedAt/UpdatedAt set to now if zero.
 // Empty GroupID defaults to the order ID.
-func (s *Store) Create(o *Order) error {
+func (s *Store) Create(ctx context.Context, o *Order) error {
 	if s.db == nil {
 		return fmt.Errorf("store not initialized")
 	}
 	if o.ID == "" {
 		return fmt.Errorf("order id required")
 	}
-	if o.GroupID == "" {
-		o.GroupID = o.ID
-	}
-	now := time.Now().Unix()
-	if o.CreatedAt == 0 {
-		o.CreatedAt = now
-	}
-	if o.UpdatedAt == 0 {
-		o.UpdatedAt = now
-	}
-	_, err := s.db.Exec(`
+	applyCreateDefaults(o, time.Now().Unix())
+	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO orders (id, menu_item_id, username, add_sugar, add_milk, sugar_amount, milk_amount, status, created_at, updated_at, group_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, o.ID, o.MenuItemID, o.Username, boolToInt(o.AddSugar), boolToInt(o.AddMilk), o.SugarAmount, o.MilkAmount, o.Status, o.CreatedAt, o.UpdatedAt, o.GroupID)
@@ -62,6 +55,18 @@ func (s *Store) Create(o *Order) error {
 		return fmt.Errorf("create order: %w", err)
 	}
 	return nil
+}
+
+func applyCreateDefaults(o *Order, now int64) {
+	if o.GroupID == "" {
+		o.GroupID = o.ID
+	}
+	if o.CreatedAt == 0 {
+		o.CreatedAt = now
+	}
+	if o.UpdatedAt == 0 {
+		o.UpdatedAt = now
+	}
 }
 
 func scanOrder(scanner interface {
@@ -87,13 +92,13 @@ func scanOrder(scanner interface {
 const orderSelectCols = `id, menu_item_id, username, add_sugar, add_milk, sugar_amount, milk_amount, status, created_at, updated_at, group_id`
 
 // Get returns the order by id, or nil if not found.
-func (s *Store) Get(id string) (*Order, error) {
+func (s *Store) Get(ctx context.Context, id string) (*Order, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("store not initialized")
 	}
-	row := s.db.QueryRow(`SELECT `+orderSelectCols+` FROM orders WHERE id = ?`, id)
+	row := s.db.QueryRowContext(ctx, `SELECT `+orderSelectCols+` FROM orders WHERE id = ?`, id)
 	o, err := scanOrder(row)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -103,38 +108,38 @@ func (s *Store) Get(id string) (*Order, error) {
 }
 
 // ListByGroupID returns all orders sharing a group id, oldest first.
-func (s *Store) ListByGroupID(groupID string) ([]*Order, error) {
+func (s *Store) ListByGroupID(ctx context.Context, groupID string) ([]*Order, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("store not initialized")
 	}
 	if groupID == "" {
 		return nil, nil
 	}
-	rows, err := s.db.Query(`
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT `+orderSelectCols+`
 		FROM orders WHERE group_id = ? ORDER BY created_at ASC
 	`, groupID)
 	if err != nil {
 		return nil, fmt.Errorf("list by group: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanOrders(rows)
 }
 
 // List returns orders: when isAdmin is true, all orders; otherwise only orders for the given username. Newest first.
-func (s *Store) List(username string, isAdmin bool) ([]*Order, error) {
+func (s *Store) List(ctx context.Context, username string, isAdmin bool) ([]*Order, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("store not initialized")
 	}
 	var rows *sql.Rows
 	var err error
 	if isAdmin {
-		rows, err = s.db.Query(`
-			SELECT ` + orderSelectCols + `
+		rows, err = s.db.QueryContext(ctx, `
+			SELECT `+orderSelectCols+`
 			FROM orders ORDER BY created_at DESC
 		`)
 	} else {
-		rows, err = s.db.Query(`
+		rows, err = s.db.QueryContext(ctx, `
 			SELECT `+orderSelectCols+`
 			FROM orders WHERE username = ? ORDER BY created_at DESC
 		`, username)
@@ -142,7 +147,7 @@ func (s *Store) List(username string, isAdmin bool) ([]*Order, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list orders: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanOrders(rows)
 }
 
@@ -159,12 +164,12 @@ func scanOrders(rows *sql.Rows) ([]*Order, error) {
 }
 
 // UpdateStatus sets the order status and updated_at. Returns the updated order or nil if not found.
-func (s *Store) UpdateStatus(id, status string) (*Order, error) {
+func (s *Store) UpdateStatus(ctx context.Context, id, status string) (*Order, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("store not initialized")
 	}
 	now := time.Now().Unix()
-	res, err := s.db.Exec(`UPDATE orders SET status = ?, updated_at = ? WHERE id = ?`, status, now, id)
+	res, err := s.db.ExecContext(ctx, `UPDATE orders SET status = ?, updated_at = ? WHERE id = ?`, status, now, id)
 	if err != nil {
 		return nil, fmt.Errorf("update order status: %w", err)
 	}
@@ -172,11 +177,11 @@ func (s *Store) UpdateStatus(id, status string) (*Order, error) {
 	if n == 0 {
 		return nil, nil
 	}
-	return s.Get(id)
+	return s.Get(ctx, id)
 }
 
 // UpdateStatusByGroupID sets status for every order in the group. Returns the updated orders.
-func (s *Store) UpdateStatusByGroupID(groupID, status string) ([]*Order, error) {
+func (s *Store) UpdateStatusByGroupID(ctx context.Context, groupID, status string) ([]*Order, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("store not initialized")
 	}
@@ -184,11 +189,11 @@ func (s *Store) UpdateStatusByGroupID(groupID, status string) ([]*Order, error) 
 		return nil, nil
 	}
 	now := time.Now().Unix()
-	_, err := s.db.Exec(`UPDATE orders SET status = ?, updated_at = ? WHERE group_id = ?`, status, now, groupID)
+	_, err := s.db.ExecContext(ctx, `UPDATE orders SET status = ?, updated_at = ? WHERE group_id = ?`, status, now, groupID)
 	if err != nil {
 		return nil, fmt.Errorf("update group status: %w", err)
 	}
-	return s.ListByGroupID(groupID)
+	return s.ListByGroupID(ctx, groupID)
 }
 
 func boolToInt(b bool) int {

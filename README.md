@@ -8,6 +8,41 @@
 [![Discord](https://img.shields.io/discord/846737624960860180?label=Discord%20Server)](https://discord.gg/jhYWWpNJ3v)
 </div>
 
+## Screenshots
+
+### Menu
+
+![Menu](var/marketing/screenshots/menu.png)
+
+Browse drinks and snacks grouped by category, pick sugar and milk, and add them to a basket to send in one order.
+
+### My orders
+
+![My orders](var/marketing/screenshots/my-orders.png)
+
+Follow each of your orders from pending to preparing to delivered, with live status updates.
+
+### Order queue
+
+![Order queue](var/marketing/screenshots/admin-orders.png)
+
+Staff see every order in one place and move them through preparing and delivered as they make them.
+
+### Kitchen view
+
+![Kitchen view](var/marketing/screenshots/kitchen.png)
+
+Totals of every item across open orders, so whoever is making the round knows exactly what to prepare.
+
+### Settings
+
+![Settings](var/marketing/screenshots/settings.png)
+
+Name your site and set an Apprise URL so new orders ping your phone, chat or smart speaker.
+
+Screenshots use fictional test data and are regenerated with `make screenshots`
+(see [`var/marketing/screenshots`](var/marketing/screenshots/README.md)).
+
 ## Quick Start
 
 ```bash
@@ -36,5 +71,7 @@ Config (`config.yaml`) and SQLite data (`easypour.db`) live in `/config`. Schema
 
 Older installs that used separate `menu.db`, `orders.db`, and `settings.db` files are migrated into `easypour.db` automatically on startup (existing rows are preserved; legacy files are left in place unused).
 
-The API is available at `http://localhost:9654`. For the full web UI, run the frontend locally (see [Development](#development) below).
+Open `http://localhost:9654` for the web UI. Prometheus metrics are served at `/metrics`.
+
+See the [docs](docs/) for configuration, installation, and development guides.
 

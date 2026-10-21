@@ -1,20 +1,12 @@
 package apprise
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
-	"time"
-)
 
-const (
-	defaultTimeout = 15 * time.Second
-	maxRetries     = 3
-	baseRetryDelay = 500 * time.Millisecond
+	"easypour/service/internal/httpjson"
 )
 
 // Payload is the JSON body accepted by Apprise API /notify/ endpoints.
@@ -29,69 +21,60 @@ func Notify(client *http.Client, url string, payload Payload) error {
 	if url == "" {
 		return nil
 	}
-	if client == nil {
-		client = &http.Client{Timeout: defaultTimeout}
-	}
-	if payload.Type == "" {
-		payload.Type = "info"
-	}
-	body, err := json.Marshal(payload)
+	body, err := json.Marshal(withDefaultType(payload))
 	if err != nil {
 		return fmt.Errorf("marshal apprise payload: %w", err)
 	}
-	var lastErr error
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		if attempt > 0 {
-			time.Sleep(baseRetryDelay * (1 << (attempt - 1)))
-		}
-		if err := postOnce(client, url, body); err != nil {
-			lastErr = err
-			continue
-		}
-		return nil
-	}
-	return fmt.Errorf("apprise notify failed after %d attempts: %w", maxRetries, lastErr)
-}
-
-func postOnce(client *http.Client, url string, body []byte) error {
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, resp.Body)
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("HTTP %d", resp.StatusCode)
+	if err := httpjson.PostWithRetry(clientOrDefault(client), url, body); err != nil {
+		return fmt.Errorf("apprise notify: %w", err)
 	}
 	return nil
 }
 
+func withDefaultType(payload Payload) Payload {
+	if payload.Type == "" {
+		payload.Type = "info"
+	}
+	return payload
+}
+
+func clientOrDefault(client *http.Client) *http.Client {
+	if client == nil {
+		return &http.Client{Timeout: httpjson.DefaultTimeout}
+	}
+	return client
+}
+
 // FormatOrderBody builds a human-readable Apprise body with a bulleted item list.
 func FormatOrderBody(orderID string, itemDescriptions []string, username string) string {
+	lines := orderHeaderLines(orderID, username)
+	return strings.Join(append(lines, bulletLines(itemDescriptions)...), "\n")
+}
+
+func orderHeaderLines(orderID, username string) []string {
 	var lines []string
 	if username != "" {
-		lines = append(lines, fmt.Sprintf("Ordered by %s", username))
+		lines = append(lines, "Ordered by "+username)
 	}
 	if orderID != "" {
-		short := orderID
-		if len(short) > 8 {
-			short = short[:8]
-		}
-		lines = append(lines, fmt.Sprintf("Order #%s", short))
+		lines = append(lines, "Order #"+shortOrderID(orderID))
 	}
-	for _, item := range itemDescriptions {
-		item = strings.TrimSpace(item)
-		if item == "" {
-			continue
-		}
-		lines = append(lines, "• "+item)
+	return lines
+}
+
+func shortOrderID(orderID string) string {
+	if len(orderID) > 8 {
+		return orderID[:8]
 	}
-	return strings.Join(lines, "\n")
+	return orderID
+}
+
+func bulletLines(items []string) []string {
+	var lines []string
+	for _, item := range items {
+		if item = strings.TrimSpace(item); item != "" {
+			lines = append(lines, "• "+item)
+		}
+	}
+	return lines
 }

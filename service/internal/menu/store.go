@@ -1,7 +1,9 @@
 package menu
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,6 +31,13 @@ type menuItemYAML struct {
 
 const menuItemSelectCols = `id, name, description, supports_sugar, supports_milk, image_url, category`
 
+const insertMenuItemSQL = `
+	INSERT INTO menu_items (id, name, description, supports_sugar, supports_milk, image_url, category)
+	VALUES (?, ?, ?, ?, ?, ?, ?)
+`
+
+var errNotInitialized = errors.New("store not initialized")
+
 // Store persists menu items in SQLite.
 type Store struct {
 	db      *sql.DB
@@ -53,54 +62,39 @@ func NewStore(db *sql.DB, dataDir string) *Store {
 }
 
 // SeedIfEmpty imports menu.yaml or built-in defaults when the menu table has no rows.
-func (s *Store) SeedIfEmpty() error {
-	n, err := s.countItems()
-	if err != nil {
+func (s *Store) SeedIfEmpty(ctx context.Context) error {
+	n, err := s.countItems(ctx)
+	if err != nil || n > 0 {
 		return err
 	}
-	if n > 0 {
-		return nil
-	}
-	yamlPath := filepath.Join(s.dataDir, "menu.yaml")
-	if items, err := loadYAMLFile(yamlPath); err == nil && len(items) > 0 {
-		return s.insertAll(items)
-	}
-	return s.insertAll(defaultItems())
+	return s.insertAll(ctx, s.seedItems())
 }
 
-func (s *Store) countItems() (int, error) {
+func (s *Store) seedItems() []*easypourv1.MenuItem {
+	items, err := loadYAMLFile(filepath.Join(s.dataDir, "menu.yaml"))
+	if err == nil && len(items) > 0 {
+		return items
+	}
+	return defaultItems()
+}
+
+func (s *Store) countItems(ctx context.Context) (int, error) {
 	var n int
-	err := s.db.QueryRow(`SELECT COUNT(*) FROM menu_items`).Scan(&n)
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM menu_items`).Scan(&n)
 	if err != nil {
 		return 0, fmt.Errorf("count menu_items: %w", err)
 	}
 	return n, nil
 }
 
-func (s *Store) insertAll(items []*easypourv1.MenuItem) error {
-	tx, err := s.db.Begin()
+func (s *Store) insertAll(ctx context.Context, items []*easypourv1.MenuItem) error {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin seed: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
-
-	stmt, err := tx.Prepare(`
-		INSERT INTO menu_items (id, name, description, supports_sugar, supports_milk, image_url, category)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`)
-	if err != nil {
-		return fmt.Errorf("prepare seed insert: %w", err)
-	}
-	defer stmt.Close()
-
-	for _, it := range items {
-		if _, err := stmt.Exec(
-			it.Id, it.Name, it.Description,
-			boolToInt(it.SupportsSugar), boolToInt(it.SupportsMilk),
-			it.ImageUrl, it.Category,
-		); err != nil {
-			return fmt.Errorf("seed insert %s: %w", it.Id, err)
-		}
+	if err := insertItems(ctx, tx, items); err != nil {
+		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit seed: %w", err)
@@ -108,17 +102,42 @@ func (s *Store) insertAll(items []*easypourv1.MenuItem) error {
 	return nil
 }
 
-// Load returns all menu items.
-func (s *Store) Load() ([]*easypourv1.MenuItem, error) {
-	if s.db == nil {
-		return nil, fmt.Errorf("store not initialized")
+func insertItems(ctx context.Context, tx *sql.Tx, items []*easypourv1.MenuItem) error {
+	stmt, err := tx.PrepareContext(ctx, insertMenuItemSQL)
+	if err != nil {
+		return fmt.Errorf("prepare seed insert: %w", err)
 	}
-	rows, err := s.db.Query(`SELECT ` + menuItemSelectCols + ` FROM menu_items ORDER BY category, name`)
+	defer func() { _ = stmt.Close() }()
+	for _, it := range items {
+		if _, err := stmt.ExecContext(ctx, insertArgs(it)...); err != nil {
+			return fmt.Errorf("seed insert %s: %w", it.Id, err)
+		}
+	}
+	return nil
+}
+
+func insertArgs(it *easypourv1.MenuItem) []any {
+	return []any{
+		it.Id, it.Name, it.Description,
+		boolToInt(it.SupportsSugar), boolToInt(it.SupportsMilk),
+		it.ImageUrl, it.Category,
+	}
+}
+
+// Load returns all menu items.
+func (s *Store) Load(ctx context.Context) ([]*easypourv1.MenuItem, error) {
+	if s.db == nil {
+		return nil, errNotInitialized
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT `+menuItemSelectCols+` FROM menu_items ORDER BY category, name`)
 	if err != nil {
 		return nil, fmt.Errorf("list menu_items: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
+	return scanMenuItems(rows)
+}
 
+func scanMenuItems(rows *sql.Rows) ([]*easypourv1.MenuItem, error) {
 	var out []*easypourv1.MenuItem
 	for rows.Next() {
 		it, err := scanMenuItem(rows)
@@ -134,39 +153,37 @@ func (s *Store) Load() ([]*easypourv1.MenuItem, error) {
 }
 
 // Create inserts an item (assigning id if empty) and returns the created item.
-func (s *Store) Create(item *easypourv1.MenuItem) (*easypourv1.MenuItem, error) {
+func (s *Store) Create(ctx context.Context, item *easypourv1.MenuItem) (*easypourv1.MenuItem, error) {
 	if s.db == nil {
-		return nil, fmt.Errorf("store not initialized")
+		return nil, errNotInitialized
 	}
 	if item == nil {
 		return nil, fmt.Errorf("item required")
 	}
-	created := cloneItem(item)
-	if created.Id == "" {
-		created.Id = "item-" + uuid.New().String()[:8]
-	}
-	_, err := s.db.Exec(`
-		INSERT INTO menu_items (id, name, description, supports_sugar, supports_milk, image_url, category)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, created.Id, created.Name, created.Description,
-		boolToInt(created.SupportsSugar), boolToInt(created.SupportsMilk),
-		created.ImageUrl, created.Category)
-	if err != nil {
+	created := withGeneratedID(cloneItem(item))
+	if _, err := s.db.ExecContext(ctx, insertMenuItemSQL, insertArgs(created)...); err != nil {
 		return nil, fmt.Errorf("create menu item: %w", err)
 	}
 	return created, nil
 }
 
-// Update replaces the item with the same id.
-func (s *Store) Update(item *easypourv1.MenuItem) (*easypourv1.MenuItem, error) {
-	if s.db == nil {
-		return nil, fmt.Errorf("store not initialized")
+func withGeneratedID(it *easypourv1.MenuItem) *easypourv1.MenuItem {
+	if it.Id == "" {
+		it.Id = "item-" + uuid.New().String()[:8]
 	}
-	if item == nil || item.Id == "" {
+	return it
+}
+
+// Update replaces the item with the same id.
+func (s *Store) Update(ctx context.Context, item *easypourv1.MenuItem) (*easypourv1.MenuItem, error) {
+	if s.db == nil {
+		return nil, errNotInitialized
+	}
+	if item.GetId() == "" {
 		return nil, fmt.Errorf("item id required for update")
 	}
 	updated := cloneItem(item)
-	res, err := s.db.Exec(`
+	err := s.execAffectingItem(ctx, "update menu item", updated.Id, `
 		UPDATE menu_items
 		SET name = ?, description = ?, supports_sugar = ?, supports_milk = ?, image_url = ?, category = ?
 		WHERE id = ?
@@ -174,33 +191,34 @@ func (s *Store) Update(item *easypourv1.MenuItem) (*easypourv1.MenuItem, error) 
 		boolToInt(updated.SupportsSugar), boolToInt(updated.SupportsMilk),
 		updated.ImageUrl, updated.Category, updated.Id)
 	if err != nil {
-		return nil, fmt.Errorf("update menu item: %w", err)
-	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return nil, fmt.Errorf("update menu item: %w", err)
-	}
-	if n == 0 {
-		return nil, fmt.Errorf("menu item not found: %s", item.Id)
+		return nil, err
 	}
 	return updated, nil
 }
 
 // Delete removes the item with the given id.
-func (s *Store) Delete(id string) error {
+func (s *Store) Delete(ctx context.Context, id string) error {
 	if s.db == nil {
-		return fmt.Errorf("store not initialized")
+		return errNotInitialized
 	}
 	if id == "" {
 		return fmt.Errorf("item id required for delete")
 	}
-	res, err := s.db.Exec(`DELETE FROM menu_items WHERE id = ?`, id)
+	return s.execAffectingItem(ctx, "delete menu item", id, `DELETE FROM menu_items WHERE id = ?`, id)
+}
+
+func (s *Store) execAffectingItem(ctx context.Context, op, id, query string, args ...any) error {
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("delete menu item: %w", err)
+		return fmt.Errorf("%s: %w", op, err)
 	}
+	return requireItemAffected(res, op, id)
+}
+
+func requireItemAffected(res sql.Result, op, id string) error {
 	n, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("delete menu item: %w", err)
+		return fmt.Errorf("%s: %w", op, err)
 	}
 	if n == 0 {
 		return fmt.Errorf("menu item not found: %s", id)
@@ -228,7 +246,7 @@ func scanMenuItem(rows *sql.Rows) (*easypourv1.MenuItem, error) {
 }
 
 func loadYAMLFile(path string) ([]*easypourv1.MenuItem, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, err
 	}

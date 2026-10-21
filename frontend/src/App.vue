@@ -6,6 +6,7 @@
       :username="displayUsername"
       :sidebar-enabled="false"
       :top-bar-enabled="true"
+      :fixed="false"
       :navigation="navigation"
       @user-click="onUserClick"
     />

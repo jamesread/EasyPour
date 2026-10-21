@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/jamesread/httpauthshim/authpublic"
-	"github.com/knadh/koanf/v2"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/v2"
 )
 
 const defaultListenAddr = ":9654"
@@ -46,9 +46,9 @@ type OAuthProviderConfig struct {
 
 // Config holds application configuration including auth (httpauthshim format).
 type Config struct {
-	ConfigVersion  int                    `yaml:"configVersion"`
-	Auth           *authpublic.Config     `yaml:"auth"`
-	Webhooks       []Webhook              `yaml:"webhooks"`
+	ConfigVersion  int                   `yaml:"configVersion"`
+	Auth           *authpublic.Config    `yaml:"auth"`
+	Webhooks       []Webhook             `yaml:"webhooks"`
 	OAuthProviders []OAuthProviderConfig `yaml:"oauthProviders"`
 }
 
@@ -62,32 +62,36 @@ func SetConfigDir(dir string) {
 
 // GetConfigPath returns the first existing config file path, or empty string.
 func GetConfigPath() string {
-	if configDirOverride != "" {
-		p := filepath.Join(configDirOverride, "config.yaml")
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-	}
-	candidates := []string{
-		"./config.yaml",
-		"./config/config.yaml",
-		os.Getenv("EASYPOUR_CONFIG_FILE"),
-	}
-	for _, p := range candidates {
-		if p == "" {
-			continue
-		}
-		abs, _ := filepath.Abs(p)
-		if abs != "" {
-			if _, err := os.Stat(abs); err == nil {
-				return abs
-			}
-		}
-		if _, err := os.Stat(p); err == nil {
-			return p
+	for _, candidate := range configCandidates() {
+		if found := existingAbsPath(candidate); found != "" {
+			return found
 		}
 	}
 	return ""
+}
+
+func configCandidates() []string {
+	var candidates []string
+	if configDirOverride != "" {
+		candidates = append(candidates, filepath.Join(configDirOverride, "config.yaml"))
+	}
+	return append(candidates, "./config.yaml", "./config/config.yaml", os.Getenv("EASYPOUR_CONFIG_FILE"))
+}
+
+func existingAbsPath(path string) string {
+	if path == "" {
+		return ""
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil || !fileExists(abs) {
+		return ""
+	}
+	return abs
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // LoadConfig loads config using koanf from file or returns defaults.

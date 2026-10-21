@@ -10,7 +10,7 @@ import (
 // CvarRow is one configuration variable row.
 type CvarRow struct {
 	Key, MainType, Title, Description, Category, ValueString string
-	Ordinal, ValueInt                                         int
+	Ordinal, ValueInt                                        int
 }
 
 func cvarSelectSQL() string {

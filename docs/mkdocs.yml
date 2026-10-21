@@ -4,3 +4,4 @@ nav:
   - Configuration: configuration/index.md
   - Installation:
       - Database migrations: installation/migrations.md
+  - Development: development/index.md

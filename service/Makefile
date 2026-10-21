@@ -7,7 +7,7 @@ test:
 	go test ./...
 
 lint:
-	go vet ./...
+	golangci-lint run ./...
 
 run:
-	go run main.go
+	go run .
